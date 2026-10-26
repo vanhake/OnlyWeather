@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f6f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Wettervorhersage und DWD-Regenradar für Deutschland" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>OnlyWeather</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="brand">OnlyWeather</h1>
+      <form class="search" role="search" autocomplete="off">
+        <input id="search" type="search" placeholder="Ort suchen …" aria-label="Ort suchen" />
+        <button id="locate" type="button" title="Meinen Standort verwenden" aria-label="Meinen Standort verwenden">⌖</button>
+        <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+      </form>
+    </header>
+
+    <main>
+      <section id="current" class="card" aria-live="polite">
+        <div class="place">
+          <h2 id="place-name">…</h2>
+          <span id="place-detail" class="muted"></span>
+        </div>
+        <div id="current-body" class="current-body"><p class="muted">Lade Vorhersage …</p></div>
+        <div id="hourly" class="hourly"></div>
+        <p id="forecast-error" class="error" hidden></p>
+      </section>
+
+      <section class="card radar-card" aria-labelledby="radar-title">
+        <h2 id="radar-title">Regenradar</h2>
+        <div class="map-wrap">
+          <div id="map" aria-label="Karte mit Regenradar"></div>
+          <div id="map-error" class="map-error" role="alert" hidden></div>
+        </div>
+        <div id="timeline" class="timeline" hidden></div>
+        <p id="radar-status" class="muted small"></p>
+        <div class="toggles">
+          <label><input type="checkbox" id="toggle-lightning" /> Blitze (letzte 60 min)</label>
+          <label><input type="checkbox" id="toggle-warnings" /> Unwetterwarnungen</label>
+        </div>
+        <p id="lightning-note" class="muted small" hidden></p>
+        <div id="warning-legend" class="legend" hidden></div>
+        <figure id="radar-legend" class="legend"></figure>
+      </section>
+
+      <section class="card" aria-labelledby="daily-title">
+        <h2 id="daily-title">7 Tage</h2>
+        <ol id="daily" class="daily"></ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Wetterdaten: <a href="https://open-meteo.com/" rel="noopener">Open-Meteo.com</a>
+        (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>)
+      </p>
+      <p>Radar &amp; Warnungen: <a href="https://www.dwd.de/" rel="noopener">Deutscher Wetterdienst</a></p>
+      <p>Karte: © <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>-Mitwirkende</p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
