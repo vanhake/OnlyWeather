@@ -1,0 +1,154 @@
+name: Release
+
+# Signierte Release-Version bauen und als GitHub-Release veröffentlichen.
+# Start: Tag pushen (git tag v1.0.0 && git push origin v1.0.0)
+#    oder Actions → Release → "Run workflow" mit Versionsnummer.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versionsnummer, z. B. 1.0.0'
+        required: true
+      prerelease:
+        description: 'Als Vorabversion markieren'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Version bestimmen
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="${INPUT_VERSION#v}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          if ! [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Ungültige Versionsnummer '$VERSION' – erwartet wird MAJOR.MINOR.PATCH, z. B. 1.0.0"
+            exit 1
+          fi
+          # versionCode muss bei jedem Update steigen: 1.2.3 → 1002003
+          CODE=$(( BASH_REMATCH[1] * 1000000 + BASH_REMATCH[2] * 1000 + BASH_REMATCH[3] ))
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version $VERSION (versionCode $CODE)"
+
+      - name: Prüfen, ob die Version schon veröffentlicht ist
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "::error::Den Tag $TAG gibt es bereits. Bitte eine höhere Versionsnummer wählen."
+            exit 1
+          fi
+
+      - name: Signaturschlüssel prüfen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KEYSTORE_BASE64" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$KEYSTORE_PASSWORD" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ] && missing="$missing ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ] && missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Fehlende Repository-Secrets:$missing – siehe README, Abschnitt Release."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Web-App bauen und in das Android-Projekt kopieren
+        run: npm run android:sync
+
+      - name: Signierte APK und App Bundle bauen
+        working-directory: android
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Signatur prüfen und Dateien benennen
+        id: files
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ ! -f "$APK" ]; then
+            echo "::error::Keine signierte APK erzeugt (app-release.apk fehlt) – Signaturkonfiguration prüfen."
+            exit 1
+          fi
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          mkdir -p out
+          cp "$APK" "out/OnlyWeather-$VERSION.apk"
+          cp "$AAB" "out/OnlyWeather-$VERSION.aab"
+          (cd out && sha256sum OnlyWeather-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          rm -f "$RUNNER_TEMP/release.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OnlyWeather-${{ steps.version.outputs.name }}-release
+          path: out/*
+          if-no-files-found: error
+
+      - name: GitHub-Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: OnlyWeather ${{ steps.version.outputs.name }}
+          prerelease: ${{ inputs.prerelease == true }}
+          generate_release_notes: true
+          body: |
+            **Installation auf Android:** `OnlyWeather-${{ steps.version.outputs.name }}.apk` herunterladen und öffnen
+            (Installation aus unbekannten Quellen erlauben). Updates lassen sich direkt über eine ältere
+            Release-Version installieren. Eine vorher installierte Debug-Version muss einmal deinstalliert werden.
+
+            `OnlyWeather-${{ steps.version.outputs.name }}.aab` ist das App Bundle für den Google Play Store.
+            Prüfsummen stehen in `SHA256SUMS.txt`.
+          files: out/*
