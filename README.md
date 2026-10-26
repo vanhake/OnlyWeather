@@ -30,27 +30,47 @@ Die Web-App wird mit [Capacitor](https://capacitorjs.com/) als Android-App verpa
 In der App laufen `fetch`-Abfragen über den nativen HTTP-Stack (`CapacitorHttp`). Damit gibt es
 kein CORS-Problem, und der Proxy wird nicht gebraucht.
 
-**Über GitHub:** Der Workflow `.github/workflows/android.yml` baut bei jedem Push die APK.
-- Sie liegt unter *Actions → Android APK → Lauf → Artifacts* (ZIP mit `OnlyWeather-…-debug.apk`).
-- Bei einem Tag `v*` (z. B. `git tag v0.1.0 && git push origin v0.1.0`) wird zusätzlich ein
-  GitHub-Release mit der APK angelegt.
-- Der Lauf lässt sich auch von Hand über *Run workflow* starten.
+**Test-Versionen:** Der Workflow `.github/workflows/android.yml` baut bei jedem Push eine Debug-APK.
+Sie liegt unter *Actions → Android APK → Lauf → Artifacts*. Debug-APKs werden bei jedem Lauf mit
+einem neuen, zufälligen Schlüssel signiert. Ein Update über eine ältere Version geht deshalb nicht,
+die alte App muss vorher deinstalliert werden.
 
-Auf dem Handy: APK herunterladen, öffnen und „Installation aus unbekannten Quellen“ für den
-Browser bzw. Dateimanager erlauben.
+**Release-Versionen:** Der Workflow `.github/workflows/release.yml` baut eine mit deinem eigenen
+Schlüssel signierte Version und veröffentlicht sie als GitHub-Release mit:
+- `OnlyWeather-X.Y.Z.apk` zum direkten Installieren,
+- `OnlyWeather-X.Y.Z.aab` (App Bundle für den Google Play Store),
+- `SHA256SUMS.txt` mit Prüfsummen.
 
-**Updates installieren:** Die Debug-APK wird bei jedem Lauf mit einem neuen, zufälligen
-Debug-Schlüssel signiert. Ein Update über eine ältere Version scheitert dann, die alte App muss
-vorher deinstalliert werden. Für dauerhaft installierbare Updates einen eigenen Schlüssel anlegen
-und als Repository-Secrets hinterlegen. Dann baut der Workflow zusätzlich eine signierte Release-APK:
+Release-Versionen lassen sich ohne Deinstallieren übereinander aktualisieren. Der `versionCode`
+wird aus der Versionsnummer berechnet (1.2.3 → 1002003) und steigt so mit jeder Version.
+
+Release starten, auf eine der beiden Arten:
+- *Actions → Release → Run workflow*, Versionsnummer eingeben (z. B. `1.0.0`), optional als
+  Vorabversion markieren. Der Workflow legt den Tag `v1.0.0` selbst an.
+- Tag pushen: `git tag v1.0.0 && git push origin v1.0.0`
+
+**Einmalig: Signaturschlüssel anlegen.** Alle Release-Versionen müssen mit demselben Schlüssel
+signiert sein, sonst lassen sich Updates nicht installieren. Schlüssel erzeugen (JDK nötig):
 
 ```bash
-keytool -genkeypair -v -keystore onlyweather.jks -alias onlyweather -keyalg RSA -keysize 2048 -validity 10000
-base64 -w0 onlyweather.jks   # Ausgabe als Secret ANDROID_KEYSTORE_BASE64
+keytool -genkeypair -v -keystore onlyweather-release.jks -alias onlyweather \
+  -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=OnlyWeather"
+base64 -w0 onlyweather-release.jks > keystore.base64.txt   # macOS: base64 -i onlyweather-release.jks
 ```
 
-Weitere Secrets: `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (z. B. `onlyweather`),
-`ANDROID_KEY_PASSWORD`. Den Keystore sicher aufbewahren und nicht ins Repository legen.
+Dann unter *GitHub → Repository → Settings → Secrets and variables → Actions → New repository
+secret* anlegen:
+
+| Secret | Inhalt |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | Inhalt von `keystore.base64.txt` |
+| `ANDROID_KEYSTORE_PASSWORD` | Passwort des Keystores |
+| `ANDROID_KEY_ALIAS` | `onlyweather` |
+| `ANDROID_KEY_PASSWORD` | Passwort des Schlüssels (bei PKCS12 identisch mit dem Keystore-Passwort) |
+
+Fehlt ein Secret, bricht der Release-Workflow mit einer Meldung ab, die das fehlende Secret nennt.
+Die `.jks`-Datei und die Passwörter sicher aufbewahren (z. B. im Passwortmanager) und nie ins
+Repository legen. Geht der Schlüssel verloren, kann keine Update-fähige Version mehr erscheinen.
 
 **Lokal** (Android SDK + JDK 21 nötig): `npm run android:apk`. Die APK liegt danach unter
 `android/app/build/outputs/apk/debug/`.
