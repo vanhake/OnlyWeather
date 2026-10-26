@@ -124,6 +124,20 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
 - **Design**: mobile first, helles und dunkles Design nach Systemeinstellung (die OSM-Basiskarte wird
   im dunklen Modus abgedunkelt).
 
+## Logo und Icons
+
+Das Logo (Sonne hinter einer Regenwolke auf blauem Himmelsverlauf) ist als Code in
+`scripts/logo.mjs` definiert. `npm run icons` erzeugt daraus:
+
+- die SVG-Quellen in `assets/` sowie `public/favicon.svg`,
+- die Web-Icons (`public/icon-192.png`, `icon-512.png`, maskierbares Icon, `apple-touch-icon.png`) für
+  das Web-App-Manifest,
+- die Android-Ressourcen: Launcher-Icons für alle Dichten (eckig und rund), das adaptive Icon
+  (Verlauf als Hintergrund, Motiv innerhalb der Sicherheitszone), ein monochromes Themen-Icon für
+  Android 13+ und die Startbildschirme.
+
+Das Skript rendert mit Playwright/Chromium (`npx playwright install chromium`, falls nicht vorhanden).
+
 ## Projektstruktur
 
 ```

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "android:sync": "npm run build && cap sync android",
+    "icons": "node scripts/generate-icons.mjs",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "license": "MIT",

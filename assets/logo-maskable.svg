@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#3d93ec"/><stop offset="1" stop-color="#1a4f9e"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.38" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#ffe066"/><stop offset="1" stop-color="#f6a400"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0b2a5c" flood-opacity=".35"/>
+    </filter>
+  </defs><rect width="1024" height="1024" fill="url(#bg)"/><g transform="translate(512 512) scale(0.9) translate(-528 -560)">
+  <g>
+    <circle cx="652" cy="372" r="146" fill="url(#sun)"/>
+    <circle cx="652" cy="372" r="146" fill="none" stroke="#ffe9a6" stroke-opacity=".55" stroke-width="10"/>
+    <path fill="#ffffff" filter="url(#shadow)" d="M318 652 H714 A112 112 0 0 0 726 429 A178 178 0 0 0 391 470 A92 92 0 0 0 318 652 Z"/>
+    <g fill="#bfe3ff">
+      <path transform="translate(410 768) scale(1.1)" d="M0 -52 C 20 -24 34 -6 34 14 A 34 34 0 0 1 -34 14 C -34 -6 -20 -24 0 -52 Z"/><path transform="translate(522 800) scale(1.1)" d="M0 -52 C 20 -24 34 -6 34 14 A 34 34 0 0 1 -34 14 C -34 -6 -20 -24 0 -52 Z"/><path transform="translate(634 768) scale(1.1)" d="M0 -52 C 20 -24 34 -6 34 14 A 34 34 0 0 1 -34 14 C -34 -6 -20 -24 0 -52 Z"/>
+    </g>
+  </g></g></svg>

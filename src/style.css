@@ -84,7 +84,8 @@ h2 { font-size: 1.1rem; }
 }
 .brand { font-size: 1.05rem; white-space: nowrap; }
 .topbar { flex-wrap: wrap; }
-.brand { flex: 1; }
+.brand { flex: 1; display: flex; align-items: center; gap: 0.5rem; }
+.brand img { display: block; border-radius: 7px; }
 .topbar-actions { display: flex; gap: 0.4rem; }
 .search { position: relative; flex: 1 0 100%; display: flex; gap: 0.4rem; min-width: 0; }
 .search[hidden] { display: none; }
