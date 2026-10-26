@@ -24,6 +24,37 @@ npm run serve      # liefert ./dist aus und proxyt /dwd → maps.dwd.de (PORT=80
 Weitere Befehle: `npm test` (Unit-Tests mit Vitest), `npm run typecheck`, `npm run preview`
 (Vite-Vorschau des Builds, ebenfalls mit Proxy).
 
+### Android-App (APK)
+
+Die Web-App wird mit [Capacitor](https://capacitorjs.com/) als Android-App verpackt (`android/`).
+In der App laufen `fetch`-Abfragen über den nativen HTTP-Stack (`CapacitorHttp`). Damit gibt es
+kein CORS-Problem, und der Proxy wird nicht gebraucht.
+
+**Über GitHub:** Der Workflow `.github/workflows/android.yml` baut bei jedem Push die APK.
+- Sie liegt unter *Actions → Android APK → Lauf → Artifacts* (ZIP mit `OnlyWeather-…-debug.apk`).
+- Bei einem Tag `v*` (z. B. `git tag v0.1.0 && git push origin v0.1.0`) wird zusätzlich ein
+  GitHub-Release mit der APK angelegt.
+- Der Lauf lässt sich auch von Hand über *Run workflow* starten.
+
+Auf dem Handy: APK herunterladen, öffnen und „Installation aus unbekannten Quellen“ für den
+Browser bzw. Dateimanager erlauben.
+
+**Updates installieren:** Die Debug-APK wird bei jedem Lauf mit einem neuen, zufälligen
+Debug-Schlüssel signiert. Ein Update über eine ältere Version scheitert dann, die alte App muss
+vorher deinstalliert werden. Für dauerhaft installierbare Updates einen eigenen Schlüssel anlegen
+und als Repository-Secrets hinterlegen. Dann baut der Workflow zusätzlich eine signierte Release-APK:
+
+```bash
+keytool -genkeypair -v -keystore onlyweather.jks -alias onlyweather -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 onlyweather.jks   # Ausgabe als Secret ANDROID_KEYSTORE_BASE64
+```
+
+Weitere Secrets: `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (z. B. `onlyweather`),
+`ANDROID_KEY_PASSWORD`. Den Keystore sicher aufbewahren und nicht ins Repository legen.
+
+**Lokal** (Android SDK + JDK 21 nötig): `npm run android:apk`. Die APK liegt danach unter
+`android/app/build/outputs/apk/debug/`.
+
 ### Wozu der Proxy?
 
 Kartenbilder des DWD (WMS `GetMap`) lädt der Browser direkt als `<img>`, dafür ist kein CORS nötig.
