@@ -28,8 +28,11 @@ describe('forecast', () => {
       hourly: {
         time: hours,
         temperature_2m: hours.map((_, i) => i),
+        apparent_temperature: hours.map((_, i) => i - 2),
         precipitation_probability: hours.map(() => 50),
         precipitation: hours.map(() => 0),
+        weather_code: hours.map(() => 3),
+        is_day: hours.map(() => 1),
       },
       daily: {
         time: ['2026-10-26'],
@@ -45,6 +48,9 @@ describe('forecast', () => {
     });
     expect(f.hourly).toHaveLength(24);
     expect(f.hourly[0].temperature).toBe(5);
+    // Detailansicht: bis zu 48 h ab der aktuellen Stunde (hier stehen ab 05:00 noch 43 h zur Verfügung)
+    expect(f.hourlyDetail).toHaveLength(43);
+    expect(f.hourlyDetail[0]).toMatchObject({ apparentTemperature: 3, weatherCode: 3, isDay: true });
     expect(f.current.isDay).toBe(false);
     expect(f.daily[0].precipitationProbability).toBe(70);
   });

@@ -77,6 +77,11 @@ export class WeatherMap {
     });
   }
 
+  /** Nach dem Wiedereinblenden (Tab-Wechsel) muss Leaflet die Kartengröße neu messen. */
+  invalidateSize(): void {
+    this.map.invalidateSize();
+  }
+
   setLocation(lat: number, lon: number): void {
     this.marker.setLatLng([lat, lon]);
     this.map.setView([lat, lon], Math.max(this.map.getZoom(), 8));

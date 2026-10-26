@@ -32,20 +32,38 @@
       </section>
 
       <section class="card radar-card" aria-labelledby="radar-title">
-        <h2 id="radar-title">Regenradar</h2>
-        <div class="map-wrap">
-          <div id="map" aria-label="Karte mit Regenradar"></div>
-          <div id="map-error" class="map-error" role="alert" hidden></div>
+        <h2 id="radar-title" class="sr-only">Radar und Stundenvorhersage</h2>
+        <div class="tabs" role="tablist" aria-labelledby="radar-title">
+          <button type="button" role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true">Regenradar</button>
+          <button type="button" role="tab" id="tab-temp" aria-controls="panel-temp" aria-selected="false" tabindex="-1">Temperatur</button>
+          <button type="button" role="tab" id="tab-rain" aria-controls="panel-rain" aria-selected="false" tabindex="-1">Regen</button>
         </div>
-        <div id="timeline" class="timeline" hidden></div>
-        <p id="radar-status" class="muted small"></p>
-        <div class="toggles">
-          <label><input type="checkbox" id="toggle-lightning" /> Blitze (letzte 60 min)</label>
-          <label><input type="checkbox" id="toggle-warnings" /> Unwetterwarnungen</label>
+
+        <div id="panel-radar" role="tabpanel" aria-labelledby="tab-radar">
+          <div class="map-wrap">
+            <div id="map" aria-label="Karte mit Regenradar"></div>
+            <div id="map-error" class="map-error" role="alert" hidden></div>
+          </div>
+          <div id="timeline" class="timeline" hidden></div>
+          <p id="radar-status" class="muted small"></p>
+          <div class="toggles">
+            <label><input type="checkbox" id="toggle-lightning" /> Blitze (letzte 60 min)</label>
+            <label><input type="checkbox" id="toggle-warnings" /> Unwetterwarnungen</label>
+          </div>
+          <details id="legend-box" class="legend-box">
+            <summary>Legende</summary>
+            <p id="lightning-note" class="muted small" hidden></p>
+            <div id="warning-legend" class="legend" hidden></div>
+            <figure id="radar-legend" class="legend"></figure>
+          </details>
         </div>
-        <p id="lightning-note" class="muted small" hidden></p>
-        <div id="warning-legend" class="legend" hidden></div>
-        <figure id="radar-legend" class="legend"></figure>
+
+        <div id="panel-temp" role="tabpanel" aria-labelledby="tab-temp" class="detail-panel" hidden>
+          <p class="muted">Lade Vorhersage …</p>
+        </div>
+        <div id="panel-rain" role="tabpanel" aria-labelledby="tab-rain" class="detail-panel" hidden>
+          <p class="muted">Lade Vorhersage …</p>
+        </div>
       </section>
 
       <section class="card" aria-labelledby="daily-title">

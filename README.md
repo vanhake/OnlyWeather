@@ -74,6 +74,14 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
   (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme mit gemeinsamer Zeitachse;
   Antippen zeigt Details) und eine 7-Tage-Liste. Antworten werden 10 Minuten gecacht (Speicher +
   `localStorage`).
+- **Tabs Regenradar / Temperatur / Regen**: Die Karte hat zwei weitere Tabs mit den nächsten 48 Stunden.
+  Diagramm und Werteleiste lassen sich seitlich scrollen, Antippen hebt eine Stunde hervor.
+  - *Temperatur*: Höchst- und Tiefstwert mit Zeitpunkt, Spanne der gefühlten Temperatur, Verlauf von
+    Temperatur und gefühlter Temperatur, pro Stunde Wetter-Icon und Werte.
+  - *Regen*: Aussicht (trocken, ab wann Regen bzw. ab wann trocken), Mengen für 24 h und danach,
+    höchste Wahrscheinlichkeit mit Zeitpunkt. Dazu je ein Balkendiagramm für Wahrscheinlichkeit und
+    Menge sowie die Stundenwerte.
+  Der zuletzt gewählte Tab wird gespeichert.
 - **Regenradar** (DWD GeoServer WMS): Die App liest beim Start und dann alle 5 Minuten
   `GetCapabilities` und wählt die Radar-Ebene anhand der tatsächlich gemeldeten Layer und Zeitdimension:
   - bevorzugt `dwd:Niederschlagsradar` (vom DWD gepflegter Alias auf das empfohlene Radarprodukt,
@@ -87,6 +95,8 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
   - Alle Frames werden als Einzelbilder für den sichtbaren Ausschnitt vorgeladen (höchstens 4 parallel,
     um den DWD-Server zu schonen). Die Animation schaltet dann nur noch die Deckkraft um.
   - Die Farblegende kommt per `GetLegendGraphic` direkt vom DWD und passt damit immer zur Ebene.
+    Sie ist zusammen mit den Legenden für Blitze und Warnungen unter „Legende“ ausklappbar; der Zustand
+    wird gespeichert.
 - **Blitze**: Der DWD-WMS bietet eine eigene Blitz-Ebene an (`dwd:Blitzdichte`, NowCastMIX,
   Blitzdichte der jeweils letzten 15 Minuten). Hat sie eine Zeitachse, zeigt die App die Stände von
   jetzt, −15, −30 und −45 Minuten übereinander und färbt sie nach Alter (gelb → orange → rot →
@@ -109,6 +119,7 @@ src/forecast.ts         Open-Meteo-Abfrage und Aufbereitung
 src/location.ts         Geolocation, Geocoding, gespeicherter Ort
 src/cache.ts            10-Minuten-Cache
 src/chart.ts            24-h-Diagramm (SVG)
+src/detail-charts.ts    48-h-Detailansichten Temperatur und Regen
 src/map.ts              Leaflet-Karte, Radar-Steuerung, Blitze, Warnungen
 src/radar.ts            Vorladen und Umschalten der Radarbilder
 src/timeline.ts         Zeitleiste mit Play/Pause

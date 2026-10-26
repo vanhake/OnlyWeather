@@ -1,5 +1,6 @@
 import './style.css';
 import { renderHourlyChart } from './chart';
+import { renderRainDetail, renderTemperatureDetail } from './detail-charts';
 import { loadForecast, type Forecast } from './forecast';
 import { defaultPlace, loadSavedPlace, locateBrowser, savePlace, searchPlaces, type Place } from './location';
 import { WeatherMap } from './map';
@@ -68,6 +69,8 @@ async function showForecast(): Promise<void> {
     lastForecast = f;
     renderCurrent(f);
     renderDaily(f);
+    renderTemperatureDetail($('#panel-temp'), f.hourlyDetail);
+    renderRainDetail($('#panel-rain'), f.hourlyDetail);
   } catch (e) {
     if (token !== loadToken) return;
     err.textContent = `Vorhersage nicht verfügbar: ${(e as Error).message} Bitte später erneut versuchen.`;
@@ -75,6 +78,9 @@ async function showForecast(): Promise<void> {
     $('#current-body').innerHTML = '';
     $('#hourly').replaceChildren();
     $('#daily').innerHTML = '<li class="muted">Keine Daten.</li>';
+    for (const id of ['#panel-temp', '#panel-rain']) {
+      $(id).innerHTML = '<p class="error">Stundenvorhersage nicht verfügbar.</p>';
+    }
   }
 }
 
@@ -170,8 +176,62 @@ async function useGeolocation(userInitiated: boolean): Promise<void> {
   }
 }
 
+const TAB_KEY = 'onlyweather.tab';
+
+function setupTabs(): void {
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tabs [role="tab"]'));
+  const select = (tab: HTMLButtonElement, focus = false) => {
+    for (const t of tabs) {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      $(`#${t.getAttribute('aria-controls')}`).hidden = !on;
+    }
+    if (focus) tab.focus();
+    if (tab.id === 'tab-radar') weatherMap?.invalidateSize();
+    try {
+      localStorage.setItem(TAB_KEY, tab.id);
+    } catch {
+      // ohne Speicher startet die App immer mit dem Radar
+    }
+  };
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(tab));
+    tab.addEventListener('keydown', (e) => {
+      const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (step) select(tabs[(i + step + tabs.length) % tabs.length], true);
+    });
+  });
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(TAB_KEY);
+  } catch {
+    // ignorieren
+  }
+  const initial = tabs.find((t) => t.id === saved);
+  if (initial) select(initial);
+}
+
+function setupLegend(): void {
+  const KEY = 'onlyweather.legendOpen';
+  const box = $<HTMLDetailsElement>('#legend-box');
+  try {
+    box.open = localStorage.getItem(KEY) === '1';
+  } catch {
+    // ignorieren
+  }
+  box.addEventListener('toggle', () => {
+    try {
+      localStorage.setItem(KEY, box.open ? '1' : '0');
+    } catch {
+      // ignorieren
+    }
+  });
+}
+
 function init(): void {
   setupSearch();
+  setupLegend();
   const saved = loadSavedPlace();
   try {
     weatherMap = new WeatherMap($('#map'), place.lat, place.lon);
@@ -181,6 +241,7 @@ function init(): void {
     box.textContent = `Karte konnte nicht initialisiert werden: ${(e as Error).message}`;
     box.hidden = false;
   }
+  setupTabs();
   setPlace(place, Boolean(saved));
   // Erster Besuch ohne gespeicherten Ort: Standort anfragen, sonst bleibt Berlin.
   if (!saved) void useGeolocation(false);

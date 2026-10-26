@@ -2,6 +2,16 @@ import { cached } from './cache';
 import { FORECAST_CACHE_MS, OPEN_METEO_FORECAST } from './config';
 import { fetchJson } from './http';
 
+export interface Hour {
+  time: string;
+  temperature: number;
+  apparentTemperature: number;
+  precipitationProbability: number | null;
+  precipitation: number;
+  weatherCode: number;
+  isDay: boolean;
+}
+
 export interface Forecast {
   current: {
     time: string;
@@ -14,7 +24,10 @@ export interface Forecast {
     windGusts: number;
     windDirection: number;
   };
-  hourly: { time: string; temperature: number; precipitationProbability: number | null; precipitation: number }[];
+  /** Nächste 24 h ab der aktuellen Stunde */
+  hourly: Hour[];
+  /** Nächste 48 h ab der aktuellen Stunde, für die Detail-Tabs */
+  hourlyDetail: Hour[];
   daily: {
     date: string;
     weatherCode: number;
@@ -43,8 +56,11 @@ interface OpenMeteoResponse {
   hourly: {
     time: string[];
     temperature_2m: number[];
+    apparent_temperature: number[];
     precipitation_probability: (number | null)[];
     precipitation: number[];
+    weather_code: number[];
+    is_day: number[];
   };
   daily: {
     time: string[];
@@ -77,7 +93,14 @@ export function forecastUrl(lat: number, lon: number): string {
       'wind_gusts_10m',
       'wind_direction_10m',
     ].join(','),
-    hourly: ['temperature_2m', 'precipitation_probability', 'precipitation'].join(','),
+    hourly: [
+      'temperature_2m',
+      'apparent_temperature',
+      'precipitation_probability',
+      'precipitation',
+      'weather_code',
+      'is_day',
+    ].join(','),
     daily: [
       'weather_code',
       'temperature_2m_max',
@@ -98,12 +121,19 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
   const currentHour = c.time.slice(0, 13);
   let start = r.hourly.time.findIndex((t) => t.slice(0, 13) === currentHour);
   if (start < 0) start = 0;
-  const hourly = r.hourly.time.slice(start, start + 24).map((time, i) => ({
-    time,
-    temperature: r.hourly.temperature_2m[start + i],
-    precipitationProbability: r.hourly.precipitation_probability[start + i],
-    precipitation: r.hourly.precipitation[start + i],
-  }));
+  const h = r.hourly;
+  const hourlyDetail: Hour[] = h.time.slice(start, start + 48).map((time, k) => {
+    const i = start + k;
+    return {
+      time,
+      temperature: h.temperature_2m[i],
+      apparentTemperature: h.apparent_temperature[i],
+      precipitationProbability: h.precipitation_probability[i],
+      precipitation: h.precipitation[i],
+      weatherCode: h.weather_code[i],
+      isDay: h.is_day[i] === 1,
+    };
+  });
   const d = r.daily;
   return {
     current: {
@@ -117,7 +147,8 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       windGusts: c.wind_gusts_10m,
       windDirection: c.wind_direction_10m,
     },
-    hourly,
+    hourly: hourlyDetail.slice(0, 24),
+    hourlyDetail,
     daily: d.time.map((date, i) => ({
       date,
       weatherCode: d.weather_code[i],
