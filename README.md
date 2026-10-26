@@ -67,8 +67,11 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
 
 ## Funktionen
 
-- **Standort**: Browser-Geolocation oder Ortssuche (Open-Meteo Geocoding, deutsche Orte zuerst).
-  Der zuletzt gewählte Ort wird im `localStorage` gespeichert.
+- **Orte**: Mit **+** oben rechts einen Ort suchen (Open-Meteo Geocoding, deutsche Orte zuerst) und
+  zur Liste hinzufügen. ⌖ setzt den eigenen Standort per Geolocation, er steht immer an erster
+  Stelle. Gewechselt wird durch Wischen nach links/rechts (außer auf Karte, Zeitleiste und Diagrammen)
+  oder über die Punkte unter dem Ortsnamen. „Entfernen“ löscht den aktuellen Ort. Liste und gewählter
+  Ort werden im `localStorage` gespeichert.
 - **Vorhersage** (Open-Meteo, `models=best_match`, in Deutschland DWD ICON): aktuelle und gefühlte
   Temperatur, Wetterzustand (WMO-Code → Icon), Wind und Böen, Niederschlag. Dazu ein 24-h-Diagramm
   (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme mit gemeinsamer Zeitachse;
@@ -82,6 +85,9 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
     höchste Wahrscheinlichkeit mit Zeitpunkt. Dazu je ein Balkendiagramm für Wahrscheinlichkeit und
     Menge sowie die Stundenwerte.
   Der zuletzt gewählte Tab wird gespeichert.
+- **Karte auf dem Handy**: Mit einem Finger scrollt die Seite, verschoben und gezoomt wird mit zwei
+  Fingern. Ein kurzer Hinweis erscheint, wenn man es mit einem Finger versucht. Am Desktop lässt sich
+  die Karte weiter mit der Maus ziehen.
 - **Regenradar** (DWD GeoServer WMS): Die App liest beim Start und dann alle 5 Minuten
   `GetCapabilities` und wählt die Radar-Ebene anhand der tatsächlich gemeldeten Layer und Zeitdimension:
   - bevorzugt `dwd:Niederschlagsradar` (vom DWD gepflegter Alias auf das empfohlene Radarprodukt,
@@ -116,7 +122,8 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
 index.html              Seitengerüst (aktuelles Wetter → Radar → 7 Tage → Quellen)
 src/main.ts             UI: Ort, Suche, Vorhersage-Darstellung
 src/forecast.ts         Open-Meteo-Abfrage und Aufbereitung
-src/location.ts         Geolocation, Geocoding, gespeicherter Ort
+src/location.ts         Geolocation, Geocoding
+src/places.ts           gespeicherte Ortsliste
 src/cache.ts            10-Minuten-Cache
 src/chart.ts            24-h-Diagramm (SVG)
 src/detail-charts.ts    48-h-Detailansichten Temperatur und Regen

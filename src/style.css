@@ -79,7 +79,11 @@ h2 { font-size: 1.1rem; }
   border-bottom: 1px solid var(--border);
 }
 .brand { font-size: 1.05rem; white-space: nowrap; }
-.search { position: relative; flex: 1; display: flex; gap: 0.4rem; min-width: 0; }
+.topbar { flex-wrap: wrap; }
+.brand { flex: 1; }
+.topbar-actions { display: flex; gap: 0.4rem; }
+.search { position: relative; flex: 1 0 100%; display: flex; gap: 0.4rem; min-width: 0; }
+.search[hidden] { display: none; }
 .search input {
   flex: 1;
   min-width: 0;
@@ -90,7 +94,7 @@ h2 { font-size: 1.1rem; }
   background: var(--surface);
   color: var(--text);
 }
-.search button, .tl-play {
+.icon-btn, .tl-play {
   font: inherit;
   font-size: 1.15rem;
   width: 2.5rem;
@@ -102,7 +106,64 @@ h2 { font-size: 1.1rem; }
   color: var(--text);
   cursor: pointer;
 }
-.search button:disabled { opacity: 0.5; }
+.icon-btn:disabled { opacity: 0.5; }
+.icon-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.link-btn {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---- Ortswechsel ---- */
+.place-dots { display: flex; justify-content: center; gap: 2px; margin-top: 0.25rem; }
+.dot {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.dot[aria-selected='true']::before { background: var(--accent); }
+/* GPS-Standort als kleiner Pfeil statt Punkt */
+.dot-gps::before {
+  width: 0;
+  height: 0;
+  border-radius: 0;
+  background: none !important;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid var(--border);
+}
+.dot-gps[aria-selected='true']::before { border-bottom-color: var(--accent); }
+@keyframes slide-from-right { from { transform: translateX(32px); opacity: 0; } }
+@keyframes slide-from-left { from { transform: translateX(-32px); opacity: 0; } }
+.slide-left { animation: slide-from-right 0.22s ease-out; }
+.slide-right { animation: slide-from-left 0.22s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .slide-left, .slide-right { animation: none; }
+}
 .search-results {
   position: absolute;
   top: calc(100% + 4px);
@@ -179,7 +240,7 @@ main {
 }
 
 /* ---- Karte ---- */
-.map-wrap { position: relative; border-radius: 10px; overflow: hidden; }
+.map-wrap { position: relative; border-radius: 10px; overflow: hidden; isolation: isolate; }
 #map { height: min(62vh, 480px); min-height: 300px; background: var(--bg); }
 .map-error {
   position: absolute;
@@ -198,6 +259,23 @@ main {
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--text); }
 }
 .radar-frame { image-rendering: auto; }
+#map.one-finger-scroll { touch-action: pan-y; }
+.map-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  color: #fff;
+  background: rgb(0 0 0 / 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.map-hint.visible { opacity: 1; }
 .warn-list { margin: 0; padding-left: 1rem; }
 .warn-list p { margin: 0.25rem 0 0.5rem; font-size: 0.85rem; }
 

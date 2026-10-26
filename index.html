@@ -13,9 +13,13 @@
   <body>
     <header class="topbar">
       <h1 class="brand">OnlyWeather</h1>
-      <form class="search" role="search" autocomplete="off">
-        <input id="search" type="search" placeholder="Ort suchen …" aria-label="Ort suchen" />
-        <button id="locate" type="button" title="Meinen Standort verwenden" aria-label="Meinen Standort verwenden">⌖</button>
+      <div class="topbar-actions">
+        <button id="locate" type="button" class="icon-btn" title="Meinen Standort verwenden" aria-label="Meinen Standort verwenden">⌖</button>
+        <button id="add-place" type="button" class="icon-btn icon-btn-primary" title="Ort hinzufügen" aria-label="Ort hinzufügen" aria-expanded="false" aria-controls="search-panel">+</button>
+      </div>
+      <form id="search-panel" class="search" role="search" autocomplete="off" hidden>
+        <input id="search" type="search" placeholder="Ort hinzufügen …" aria-label="Ort suchen und hinzufügen" />
+        <button id="search-close" type="button" class="icon-btn" aria-label="Suche schließen">✕</button>
         <ul id="search-results" class="search-results" role="listbox" hidden></ul>
       </form>
     </header>
@@ -25,7 +29,9 @@
         <div class="place">
           <h2 id="place-name">…</h2>
           <span id="place-detail" class="muted"></span>
+          <button id="remove-place" type="button" class="link-btn" hidden>Entfernen</button>
         </div>
+        <div id="place-dots" class="place-dots" role="tablist" aria-label="Gespeicherte Orte" hidden></div>
         <div id="current-body" class="current-body"><p class="muted">Lade Vorhersage …</p></div>
         <div id="hourly" class="hourly"></div>
         <p id="forecast-error" class="error" hidden></p>

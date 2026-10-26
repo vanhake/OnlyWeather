@@ -6,27 +6,8 @@ export interface Place {
   detail?: string;
   lat: number;
   lon: number;
-}
-
-const STORAGE_KEY = 'onlyweather.place';
-
-export function loadSavedPlace(): Place | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw) as Place;
-    return Number.isFinite(p.lat) && Number.isFinite(p.lon) && typeof p.name === 'string' ? p : null;
-  } catch {
-    return null;
-  }
-}
-
-export function savePlace(place: Place): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(place));
-  } catch {
-    // ohne Speicher geht es auch
-  }
+  /** Eintrag für den per Geolocation ermittelten Standort */
+  gps?: boolean;
 }
 
 export const defaultPlace: Place = { ...DEFAULT_PLACE, detail: 'Standard' };
@@ -41,6 +22,7 @@ export function locateBrowser(): Promise<Place> {
       (pos) =>
         resolve({
           name: 'Mein Standort',
+          gps: true,
           detail: `${pos.coords.latitude.toFixed(2)}°, ${pos.coords.longitude.toFixed(2)}°`,
           lat: pos.coords.latitude,
           lon: pos.coords.longitude,

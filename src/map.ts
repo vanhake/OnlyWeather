@@ -29,7 +29,14 @@ export class WeatherMap {
   private errorBox = $<HTMLElement>('#map-error');
 
   constructor(container: HTMLElement, lat: number, lon: number) {
-    this.map = L.map(container, { zoomControl: true, attributionControl: true }).setView([lat, lon], 8);
+    // Auf Touch-Geräten: ein Finger scrollt die Seite, verschoben/gezoomt wird mit zwei Fingern
+    // (Leaflets Pinch-Geste verschiebt die Karte mit). Maus-Ziehen bleibt am Desktop erhalten.
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    this.map = L.map(container, { zoomControl: true, attributionControl: true, dragging: !coarse }).setView(
+      [lat, lon],
+      8,
+    );
+    if (coarse) this.setupTwoFingerHint(container);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       className: 'basemap',
@@ -75,6 +82,36 @@ export class WeatherMap {
         void this.refresh();
       }
     });
+  }
+
+  private setupTwoFingerHint(container: HTMLElement): void {
+    container.classList.add('one-finger-scroll');
+    const hint = document.createElement('div');
+    hint.className = 'map-hint';
+    hint.textContent = 'Zum Verschieben der Karte zwei Finger verwenden';
+    hint.setAttribute('aria-hidden', 'true');
+    container.parentElement?.appendChild(hint);
+    let timer: number | undefined;
+    let startY = 0;
+    container.addEventListener(
+      'touchstart',
+      (e) => {
+        startY = e.touches[0]?.clientY ?? 0;
+        if (e.touches.length > 1) hint.classList.remove('visible');
+      },
+      { passive: true },
+    );
+    container.addEventListener(
+      'touchmove',
+      (e) => {
+        // Nur bei eher seitlicher Ein-Finger-Bewegung – senkrechtes Scrollen ist ja gewollt.
+        if (e.touches.length !== 1 || Math.abs(e.touches[0].clientY - startY) > 30) return;
+        hint.classList.add('visible');
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => hint.classList.remove('visible'), 1500);
+      },
+      { passive: true },
+    );
   }
 
   /** Nach dem Wiedereinblenden (Tab-Wechsel) muss Leaflet die Kartengröße neu messen. */

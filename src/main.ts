@@ -2,8 +2,9 @@ import './style.css';
 import { renderHourlyChart } from './chart';
 import { renderRainDetail, renderTemperatureDetail } from './detail-charts';
 import { loadForecast, type Forecast } from './forecast';
-import { defaultPlace, loadSavedPlace, locateBrowser, savePlace, searchPlaces, type Place } from './location';
+import { defaultPlace, locateBrowser, searchPlaces, type Place } from './location';
 import { WeatherMap } from './map';
+import { PlaceList } from './places';
 import { compass, describeWeather } from './weathercodes';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -11,7 +12,8 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as
 const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
 const dayFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
 
-let place: Place = loadSavedPlace() ?? defaultPlace;
+const places = new PlaceList();
+let place: Place = places.current ?? defaultPlace;
 let weatherMap: WeatherMap | null = null;
 let loadToken = 0;
 let lastForecast: Forecast | null = null;
@@ -84,13 +86,91 @@ async function showForecast(): Promise<void> {
   }
 }
 
-function setPlace(p: Place, persist = true): void {
-  place = p;
-  if (persist) savePlace(p);
-  $('#place-name').textContent = p.name;
-  $('#place-detail').textContent = p.detail ?? '';
-  weatherMap?.setLocation(p.lat, p.lon);
+/** Zeigt den aktuell gewählten Ort an; ohne gespeicherte Orte den Standardort. */
+function showPlace(direction = 0): void {
+  place = places.current ?? defaultPlace;
+  $('#place-name').textContent = place.name;
+  $('#place-detail').textContent = place.detail ?? '';
+  $('#remove-place').hidden = places.length === 0;
+  renderDots();
+  weatherMap?.setLocation(place.lat, place.lon);
+  if (direction) slideIn(direction);
   void showForecast();
+}
+
+function renderDots(): void {
+  const box = $('#place-dots');
+  box.hidden = places.length < 2;
+  box.replaceChildren(
+    ...places.places.map((p, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'dot';
+      dot.setAttribute('role', 'tab');
+      dot.setAttribute('aria-selected', String(i === places.index));
+      dot.setAttribute('aria-label', p.gps ? `${p.name} (GPS)` : p.name);
+      dot.title = p.name;
+      if (p.gps) dot.classList.add('dot-gps');
+      dot.addEventListener('click', () => switchTo(i));
+      return dot;
+    }),
+  );
+}
+
+function switchTo(index: number, direction = Math.sign(index - places.index)): void {
+  if (places.length < 2) return;
+  places.select(index);
+  showPlace(direction || 1);
+}
+
+function slideIn(direction: number): void {
+  for (const el of document.querySelectorAll<HTMLElement>('#current, #daily')) {
+    el.classList.remove('slide-left', 'slide-right');
+    void el.offsetWidth; // Animation neu starten
+    el.classList.add(direction > 0 ? 'slide-left' : 'slide-right');
+  }
+}
+
+/** Wischen nach links/rechts wechselt den Ort – außer auf Karte, Zeitleiste und scrollbaren Diagrammen. */
+function setupSwipe(): void {
+  const area = document.querySelector('main')!;
+  const ignore = '.map-wrap, .timeline, .dc-scroll, .tabs, input, .hourly';
+  let start: { x: number; y: number; t: number } | null = null;
+  area.addEventListener(
+    'touchstart',
+    (e) => {
+      start =
+        e.touches.length === 1 && !(e.target as Element).closest(ignore)
+          ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() }
+          : null;
+    },
+    { passive: true },
+  );
+  area.addEventListener(
+    'touchend',
+    (e) => {
+      if (!start || places.length < 2) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      const fast = Date.now() - start.t < 600;
+      start = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > 1.6 * Math.abs(dy) && fast) {
+        // Nach links wischen = nächster Ort
+        switchTo(places.index + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+      }
+    },
+    { passive: true },
+  );
+  $('#place-dots').addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') switchTo(places.index + 1, 1);
+    if (e.key === 'ArrowLeft') switchTo(places.index - 1, -1);
+  });
+  $('#remove-place').addEventListener('click', () => {
+    if (!confirm(`„${place.name}“ aus der Liste entfernen?`)) return;
+    places.removeCurrent();
+    showPlace();
+  });
 }
 
 function setupSearch(): void {
@@ -100,16 +180,31 @@ function setupSearch(): void {
   let ctrl: AbortController | null = null;
   let results: Place[] = [];
 
+  const panel = $<HTMLFormElement>('#search-panel');
+  const addBtn = $<HTMLButtonElement>('#add-place');
   const close = () => {
     list.hidden = true;
     list.replaceChildren();
   };
-  const choose = (p: Place) => {
+  const closePanel = () => {
     close();
     input.value = '';
-    input.blur();
-    setPlace(p);
+    panel.hidden = true;
+    addBtn.setAttribute('aria-expanded', 'false');
   };
+  const openPanel = () => {
+    panel.hidden = false;
+    addBtn.setAttribute('aria-expanded', 'true');
+    input.focus();
+  };
+  const choose = (p: Place) => {
+    closePanel();
+    input.blur();
+    places.add(p);
+    showPlace(1);
+  };
+  addBtn.addEventListener('click', () => (panel.hidden ? openPanel() : closePanel()));
+  $('#search-close').addEventListener('click', closePanel);
 
   input.addEventListener('input', () => {
     window.clearTimeout(timer);
@@ -152,9 +247,9 @@ function setupSearch(): void {
     e.preventDefault();
     if (results[0]) choose(results[0]);
   });
-  input.addEventListener('keydown', (e) => e.key === 'Escape' && close());
+  input.addEventListener('keydown', (e) => e.key === 'Escape' && closePanel());
   document.addEventListener('click', (e) => {
-    if (!(e.target as Element).closest('.search')) close();
+    if (!(e.target as Element).closest('.topbar')) closePanel();
   });
 
   $('#locate').addEventListener('click', () => void useGeolocation(true));
@@ -164,7 +259,8 @@ async function useGeolocation(userInitiated: boolean): Promise<void> {
   const btn = $<HTMLButtonElement>('#locate');
   btn.disabled = true;
   try {
-    setPlace(await locateBrowser());
+    places.setGps(await locateBrowser());
+    showPlace();
   } catch (e) {
     if (userInitiated) {
       const err = $('#forecast-error');
@@ -232,7 +328,8 @@ function setupLegend(): void {
 function init(): void {
   setupSearch();
   setupLegend();
-  const saved = loadSavedPlace();
+  setupSwipe();
+  const firstVisit = places.length === 0;
   try {
     weatherMap = new WeatherMap($('#map'), place.lat, place.lon);
     void weatherMap.start();
@@ -242,9 +339,9 @@ function init(): void {
     box.hidden = false;
   }
   setupTabs();
-  setPlace(place, Boolean(saved));
-  // Erster Besuch ohne gespeicherten Ort: Standort anfragen, sonst bleibt Berlin.
-  if (!saved) void useGeolocation(false);
+  showPlace();
+  // Erster Besuch ohne gespeicherten Ort: Standort anfragen, sonst bleibt Berlin (ungespeichert).
+  if (firstVisit) void useGeolocation(false);
   // Vorhersage regelmäßig auffrischen (Cache sorgt für max. eine Abfrage pro 10 Minuten).
   window.setInterval(() => void showForecast(), 10 * 60 * 1000);
   let resizeTimer: number | undefined;
