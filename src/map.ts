@@ -77,6 +77,8 @@ export class WeatherMap {
       this.setWarnings((e.target as HTMLInputElement).checked),
     );
     this.map.on('click', (e: L.LeafletMouseEvent) => this.queryWarnings(e));
+    // Nach einem Verbindungsabbruch (z. B. App aus dem Hintergrund geholt) sofort neu laden
+    window.addEventListener('online', () => void this.refresh());
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && this.plan && Date.now() - this.plan.boundary > RADAR_REFRESH_MS * 2) {
         void this.refresh();
@@ -167,7 +169,10 @@ export class WeatherMap {
   private onProgress(p: RadarProgress): void {
     if (!p.total) return;
     if (p.failed === p.total) {
-      this.showError('Die Radarbilder konnten nicht vom DWD-Server geladen werden. Neuer Versuch in 5 Minuten.');
+      this.showError('Die Radarbilder konnten nicht vom DWD-Server geladen werden. Neuer Versuch in 5 Minuten.', 'frames');
+    } else if (p.loaded > 0 && this.errorKind === 'frames') {
+      // Sobald wieder Bilder ankommen, ist die Meldung überholt.
+      this.hideError();
     }
     const layerInfo = this.plan
       ? this.plan.nowcastLayer && this.plan.nowcastLayer !== this.plan.observedLayer
@@ -315,13 +320,17 @@ export class WeatherMap {
 
   // ---- Fehleranzeige --------------------------------------------------------------------
 
-  private showError(msg: string): void {
+  private errorKind: 'frames' | 'service' | null = null;
+
+  private showError(msg: string, kind: 'frames' | 'service' = 'service'): void {
     this.errorBox.textContent = msg;
     this.errorBox.hidden = false;
+    this.errorKind = kind;
   }
 
   private hideError(): void {
     this.errorBox.hidden = true;
+    this.errorKind = null;
   }
 }
 

@@ -261,7 +261,7 @@ main {
 #map { height: min(62vh, 480px); min-height: 300px; background: var(--bg); }
 .map-error {
   position: absolute;
-  inset: auto 10px 10px 10px;
+  inset: 10px 10px auto 58px; /* oben, neben den Zoom-Knöpfen – die Quellenangabe bleibt lesbar */
   z-index: 800;
   background: var(--error-bg);
   color: var(--error-text);

@@ -32,6 +32,8 @@ export class RadarAnimator {
   private active = 0;
   private moveTimer: number | undefined;
   private generation = 0;
+  private retryTimer: number | undefined;
+  private retried = -1;
 
   constructor(
     private map: L.Map,
@@ -67,7 +69,12 @@ export class RadarAnimator {
   /** Bildausschnitt geändert: alle Frames für den neuen Ausschnitt neu anfordern. */
   rebuild(): void {
     if (!this.items.length) return;
+    // Unsichtbare Karte (anderer Tab aktiv) hat die Größe 0 – dann gäbe es nur ungültige Anfragen.
+    // Sobald sie wieder sichtbar ist, löst Leaflets resize-Ereignis den Neuaufbau aus.
+    const size = this.map.getSize();
+    if (size.x === 0 || size.y === 0) return;
     this.generation++;
+    window.clearTimeout(this.retryTimer);
     this.removeOverlays();
     const req = imageRequestFor(this.map);
     for (const item of this.items) {
@@ -95,6 +102,7 @@ export class RadarAnimator {
 
   clear(): void {
     this.generation++;
+    window.clearTimeout(this.retryTimer);
     this.removeOverlays();
     this.items = [];
     this.current = -1;
@@ -149,10 +157,31 @@ export class RadarAnimator {
       if (state === 'loaded' && i === this.current) this.display(i);
       this.report();
       this.pump();
+      if (this.active === 0 && this.nextIdle() < 0) this.scheduleRetry(gen);
     };
     overlay.once('load', () => done('loaded'));
     overlay.once('error', () => done('error'));
     overlay.addTo(this.map);
+  }
+
+  /** Fehlgeschlagene Frames (z. B. kurzzeitige Serverfehler) einmal pro Ausschnitt erneut anfordern. */
+  private scheduleRetry(gen: number): void {
+    const failed = this.items.filter((item) => item.state === 'error');
+    if (!failed.length || this.retried === gen) return;
+    this.retried = gen;
+    this.retryTimer = window.setTimeout(() => {
+      if (gen !== this.generation) return;
+      const bounds = failed[0].overlay?.getBounds();
+      for (const item of failed) {
+        if (item.overlay) this.map.removeLayer(item.overlay);
+        item.overlay = bounds
+          ? L.imageOverlay(item.url, bounds, { pane: this.pane, opacity: 0, interactive: false, className: 'radar-frame' })
+          : null;
+        item.state = item.overlay ? 'idle' : 'error';
+      }
+      this.report();
+      this.pump();
+    }, 20_000);
   }
 
   private report(): void {
