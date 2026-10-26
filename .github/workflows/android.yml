@@ -1,0 +1,94 @@
+name: Android APK
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # für das Anhängen der APK an ein Release bei Tags
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('0.1.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Web-App bauen und in das Android-Projekt kopieren
+        run: npm run android:sync
+
+      - name: Debug-APK bauen
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Release-Keystore einrichten (falls Secrets gesetzt)
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Signierte Release-APK bauen
+        if: steps.keystore.outputs.path != ''
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: APKs einsammeln
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/OnlyWeather-${VERSION_NAME}-debug.apk"
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk "out/OnlyWeather-${VERSION_NAME}.apk"
+          fi
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OnlyWeather-${{ env.VERSION_NAME }}
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: Release mit APK anlegen (nur bei Tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*.apk
+          generate_release_notes: true
