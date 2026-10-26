@@ -1,6 +1,7 @@
 import { cached } from './cache';
 import { FORECAST_CACHE_MS, OPEN_METEO_FORECAST } from './config';
 import { fetchJson } from './http';
+import { DEFAULT_SOLAR, toOpenMeteoAzimuth, type SolarSettings } from './solar-settings';
 
 export interface Hour {
   time: string;
@@ -10,6 +11,22 @@ export interface Hour {
   precipitation: number;
   weatherCode: number;
   isDay: boolean;
+  /** Einstrahlung auf die Modulebene (W/m², Mittel der vorangegangenen Stunde) */
+  gti: number;
+  cloudCover: number;
+}
+
+export interface SolarDay {
+  date: string;
+  sunrise: string;
+  sunset: string;
+  /** Tageslänge in Sekunden */
+  daylight: number;
+  /** Sonnenscheindauer in Sekunden */
+  sunshine: number;
+  uvMax: number | null;
+  /** Summe der Einstrahlung auf die Modulebene in kWh/m² */
+  panelKwhM2: number;
 }
 
 export interface Forecast {
@@ -39,6 +56,7 @@ export interface Forecast {
     windGustsMax: number;
     windDirection: number;
   }[];
+  solar: SolarDay[];
 }
 
 interface OpenMeteoResponse {
@@ -61,6 +79,8 @@ interface OpenMeteoResponse {
     precipitation: number[];
     weather_code: number[];
     is_day: number[];
+    global_tilted_irradiance: (number | null)[];
+    cloud_cover: number[];
   };
   daily: {
     time: string[];
@@ -72,13 +92,21 @@ interface OpenMeteoResponse {
     wind_speed_10m_max: number[];
     wind_gusts_10m_max: number[];
     wind_direction_10m_dominant: number[];
+    sunrise: string[];
+    sunset: string[];
+    daylight_duration: number[];
+    sunshine_duration: number[];
+    uv_index_max: (number | null)[];
   };
 }
 
-export function forecastUrl(lat: number, lon: number): string {
+export function forecastUrl(lat: number, lon: number, solar: SolarSettings = DEFAULT_SOLAR): string {
   const params = new URLSearchParams({
     latitude: lat.toFixed(3),
     longitude: lon.toFixed(3),
+    // Neigung und Ausrichtung der Module für global_tilted_irradiance
+    tilt: String(solar.tilt),
+    azimuth: String(toOpenMeteoAzimuth(solar.bearing)),
     models: 'best_match',
     timezone: 'auto',
     forecast_days: '7',
@@ -100,6 +128,8 @@ export function forecastUrl(lat: number, lon: number): string {
       'precipitation',
       'weather_code',
       'is_day',
+      'global_tilted_irradiance',
+      'cloud_cover',
     ].join(','),
     daily: [
       'weather_code',
@@ -110,6 +140,11 @@ export function forecastUrl(lat: number, lon: number): string {
       'wind_speed_10m_max',
       'wind_gusts_10m_max',
       'wind_direction_10m_dominant',
+      'sunrise',
+      'sunset',
+      'daylight_duration',
+      'sunshine_duration',
+      'uv_index_max',
     ].join(','),
   });
   return `${OPEN_METEO_FORECAST}?${params}`;
@@ -132,9 +167,18 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       precipitation: h.precipitation[i],
       weatherCode: h.weather_code[i],
       isDay: h.is_day[i] === 1,
+      // Vereinzelt liefert die API leicht negative Werte; physikalisch ist das 0.
+      gti: Math.max(0, h.global_tilted_irradiance[i] ?? 0),
+      cloudCover: h.cloud_cover[i],
     };
   });
   const d = r.daily;
+  // Tagessumme der Modul-Einstrahlung aus den Stundenwerten (W/m² × 1 h → Wh/m²)
+  const panelWh = new Map<string, number>();
+  h.time.forEach((t, i) => {
+    const day = t.slice(0, 10);
+    panelWh.set(day, (panelWh.get(day) ?? 0) + Math.max(0, h.global_tilted_irradiance[i] ?? 0));
+  });
   return {
     current: {
       time: c.time,
@@ -160,11 +204,20 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       windGustsMax: d.wind_gusts_10m_max[i],
       windDirection: d.wind_direction_10m_dominant[i],
     })),
+    solar: d.time.map((date, i) => ({
+      date,
+      sunrise: d.sunrise[i],
+      sunset: d.sunset[i],
+      daylight: d.daylight_duration[i],
+      sunshine: d.sunshine_duration[i],
+      uvMax: d.uv_index_max[i],
+      panelKwhM2: (panelWh.get(date) ?? 0) / 1000,
+    })),
   };
 }
 
-export async function loadForecast(lat: number, lon: number): Promise<Forecast> {
-  const url = forecastUrl(lat, lon);
+export async function loadForecast(lat: number, lon: number, solar?: SolarSettings): Promise<Forecast> {
+  const url = forecastUrl(lat, lon, solar);
   const raw = await cached(url, FORECAST_CACHE_MS, () => fetchJson<OpenMeteoResponse>(url));
   return parseForecast(raw);
 }

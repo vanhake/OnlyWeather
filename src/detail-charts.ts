@@ -3,12 +3,12 @@ import { describeWeather } from './weathercodes';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** Breite einer Stundenspalte in px – Diagramm und Werteleiste teilen sich dieses Raster. */
-const COL = 46;
+export const COL = 46;
 
 const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
 const fmt1 = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
-function el<K extends keyof SVGElementTagNameMap>(
+export function el<K extends keyof SVGElementTagNameMap>(
   tag: K,
   attrs: Record<string, string | number>,
   parent?: Element,
@@ -24,19 +24,19 @@ const dayName = (h: Hour) => weekdayFmt.format(new Date(`${h.time.slice(0, 10)}T
 const when = (h: Hour, first: Hour) =>
   `${h.time.slice(0, 10) === first.time.slice(0, 10) ? '' : `${dayName(h)} `}${h.time.slice(11, 13)} Uhr`;
 
-function cx(i: number): number {
+export function cx(i: number): number {
   return COL * (i + 0.5);
 }
 
 /** Bar mit 4px abgerundeter Oberkante, an der Grundlinie verankert. */
-function barPath(x: number, base: number, w: number, h: number): string {
+export function barPath(x: number, base: number, w: number, h: number): string {
   const y = base - h;
   const r = Math.min(4, w / 2, h);
   return `M${x},${base}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${base}Z`;
 }
 
 /** Tagestrenner (Mitternacht) mit Wochentag über dem Diagramm. */
-function dayMarkers(svg: SVGSVGElement, hours: Hour[], top: number, bottom: number): void {
+export function dayMarkers(svg: SVGSVGElement, hours: Hour[], top: number, bottom: number): void {
   hours.forEach((h, i) => {
     if (i === 0 || hourOf(h) !== 0) return;
     const x = COL * i;
@@ -46,7 +46,7 @@ function dayMarkers(svg: SVGSVGElement, hours: Hour[], top: number, bottom: numb
 }
 
 /** Hover/Tippen: Spalte im Diagramm und in der Werteleiste hervorheben. */
-function attachHover(scroller: HTMLElement, svg: SVGSVGElement, strip: HTMLElement, height: number, n: number): void {
+export function attachHover(scroller: HTMLElement, svg: SVGSVGElement, strip: HTMLElement, height: number, n: number): void {
   const band = el('rect', { x: 0, y: 0, width: COL, height, class: 'dc-hover', visibility: 'hidden' }, svg);
   svg.insertBefore(band, svg.firstChild);
   let active: Element | null = null;
@@ -69,13 +69,13 @@ function attachHover(scroller: HTMLElement, svg: SVGSVGElement, strip: HTMLEleme
   scroller.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && clear());
 }
 
-function stat(label: string, value: string, sub = ''): string {
+export function stat(label: string, value: string, sub = ''): string {
   return `<div class="dc-stat"><span class="dc-stat-label">${label}</span><strong>${value}</strong>${
     sub ? `<span class="dc-stat-sub">${sub}</span>` : ''
   }</div>`;
 }
 
-function frame(container: HTMLElement, summary: string, legend: string, n: number) {
+export function frame(container: HTMLElement, summary: string, legend: string, n: number) {
   container.innerHTML = `
     <div class="dc-stats">${summary}</div>
     ${legend ? `<div class="dc-legend">${legend}</div>` : ''}

@@ -27,8 +27,9 @@
     <main>
       <section id="current" class="card" aria-live="polite">
         <div class="place">
-          <h2 id="place-name">…</h2>
-          <span id="place-detail" class="muted"></span>
+          <div class="place-viewport">
+            <div id="place-track" class="place-track"></div>
+          </div>
           <button id="remove-place" type="button" class="link-btn" hidden>Entfernen</button>
         </div>
         <div id="place-dots" class="place-dots" role="tablist" aria-label="Gespeicherte Orte" hidden></div>
@@ -40,9 +41,10 @@
       <section class="card radar-card" aria-labelledby="radar-title">
         <h2 id="radar-title" class="sr-only">Radar und Stundenvorhersage</h2>
         <div class="tabs" role="tablist" aria-labelledby="radar-title">
-          <button type="button" role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true">Regenradar</button>
+          <button type="button" role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true">Radar</button>
           <button type="button" role="tab" id="tab-temp" aria-controls="panel-temp" aria-selected="false" tabindex="-1">Temperatur</button>
           <button type="button" role="tab" id="tab-rain" aria-controls="panel-rain" aria-selected="false" tabindex="-1">Regen</button>
+          <button type="button" role="tab" id="tab-sun" aria-controls="panel-sun" aria-selected="false" tabindex="-1">Sonne</button>
         </div>
 
         <div id="panel-radar" role="tabpanel" aria-labelledby="tab-radar">
@@ -69,6 +71,31 @@
         </div>
         <div id="panel-rain" role="tabpanel" aria-labelledby="tab-rain" class="detail-panel" hidden>
           <p class="muted">Lade Vorhersage …</p>
+        </div>
+        <div id="panel-sun" role="tabpanel" aria-labelledby="tab-sun" class="detail-panel" hidden>
+          <div id="solar-content"><p class="muted">Lade Vorhersage …</p></div>
+          <details id="solar-settings" class="legend-box">
+            <summary>Solaranlage einstellen</summary>
+            <div class="solar-form">
+              <label>Ausrichtung
+                <select id="solar-dir"></select>
+              </label>
+              <label>Himmelsrichtung in Grad
+                <input id="solar-bearing" type="number" min="0" max="359" step="1" inputmode="numeric" />
+              </label>
+              <label>Neigung in Grad
+                <input id="solar-tilt" type="number" min="0" max="90" step="1" inputmode="numeric" />
+              </label>
+              <label>Leistung in kWp (optional)
+                <input id="solar-kwp" type="text" inputmode="decimal" pattern="[0-9]+([,.][0-9]+)?" placeholder="z. B. 9,8" />
+              </label>
+            </div>
+            <p class="muted small">
+              Neigung: 0° = flach, 90° = senkrecht (Balkonkraftwerk am Geländer). Himmelsrichtung: 90° = Ost,
+              180° = Süd, 270° = West. Bei Ost-West-Dächern beide Seiten nacheinander einstellen oder die
+              Richtung der größeren Fläche wählen.
+            </p>
+          </details>
         </div>
       </section>
 

@@ -70,7 +70,7 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
 - **Orte**: Mit **+** oben rechts einen Ort suchen (Open-Meteo Geocoding, deutsche Orte zuerst) und
   zur Liste hinzufügen. ⌖ setzt den eigenen Standort per Geolocation, er steht immer an erster
   Stelle. Gewechselt wird durch Wischen nach links/rechts (außer auf Karte, Zeitleiste und Diagrammen)
-  oder über die Punkte unter dem Ortsnamen. „Entfernen“ löscht den aktuellen Ort. Liste und gewählter
+  oder über die Punkte unter dem Ortsnamen. Beim Wischen gleiten die Ortsnamen mit dem Finger mit. „Entfernen“ löscht den aktuellen Ort. Liste und gewählter
   Ort werden im `localStorage` gespeichert.
 - **Vorhersage** (Open-Meteo, `models=best_match`, in Deutschland DWD ICON): aktuelle und gefühlte
   Temperatur, Wetterzustand (WMO-Code → Icon), Wind und Böen, Niederschlag. Dazu ein 24-h-Diagramm
@@ -84,7 +84,15 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
   - *Regen*: Aussicht (trocken, ab wann Regen bzw. ab wann trocken), Mengen für 24 h und danach,
     höchste Wahrscheinlichkeit mit Zeitpunkt. Dazu je ein Balkendiagramm für Wahrscheinlichkeit und
     Menge sowie die Stundenwerte.
-  Der zuletzt gewählte Tab wird gespeichert.
+  - *Sonne*: Sonnenauf- und -untergang, Tageslänge, UV-Index, voraussichtliche Sonnenstunden,
+    Einstrahlung auf die Solarmodule (stündlich für 48 h, als Summe für 7 Tage). Unter „Solaranlage
+    einstellen“ werden Ausrichtung (Himmelsrichtung), Neigung und optional die Leistung in kWp
+    hinterlegt. Daraus fragt die App bei Open-Meteo die Einstrahlung auf genau diese Modulebene ab
+    (`global_tilted_irradiance` mit `tilt` und `azimuth`, Azimut 0 = Süd, −90 = Ost, 90 = West). Mit
+    kWp wird ein Ertrag geschätzt: Einstrahlung (kWh/m²) × kWp × 0,85. Verschattung, Schnee,
+    Modultemperatur und Wechselrichter-Grenzen sind nicht berücksichtigt.
+  Der zuletzt gewählte Tab wird gespeichert. Sonnenauf-/untergang und Sonnenstunden stehen zusätzlich
+  im oberen Bereich und in der 7-Tage-Liste.
 - **Karte auf dem Handy**: Mit einem Finger scrollt die Seite, verschoben und gezoomt wird mit zwei
   Fingern. Ein kurzer Hinweis erscheint, wenn man es mit einem Finger versucht. Am Desktop lässt sich
   die Karte weiter mit der Maus ziehen.
@@ -124,6 +132,8 @@ src/main.ts             UI: Ort, Suche, Vorhersage-Darstellung
 src/forecast.ts         Open-Meteo-Abfrage und Aufbereitung
 src/location.ts         Geolocation, Geocoding
 src/places.ts           gespeicherte Ortsliste
+src/solar-settings.ts   Ausrichtung/Neigung/kWp der Solaranlage
+src/solar-view.ts       Tab „Sonne“
 src/cache.ts            10-Minuten-Cache
 src/chart.ts            24-h-Diagramm (SVG)
 src/detail-charts.ts    48-h-Detailansichten Temperatur und Regen

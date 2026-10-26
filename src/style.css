@@ -13,6 +13,8 @@
   --error-text: #8a1c1c;
   --forecast: #6250d6;
   --feels: #6250d6;
+  --sun: #eda100;
+  --night: rgb(30 40 80 / 0.06);
   --hover: rgb(0 0 0 / 0.05);
   --radius: 14px;
 }
@@ -32,6 +34,8 @@
     --error-text: #ffb4b4;
     --forecast: #9085e9;
     --feels: #9085e9;
+    --sun: #c98500;
+    --night: rgb(0 0 0 / 0.25);
     --hover: rgb(255 255 255 / 0.07);
   }
 }
@@ -115,7 +119,7 @@ h2 { font-size: 1.1rem; }
   line-height: 1;
 }
 .link-btn {
-  margin-left: auto;
+  flex: none;
   font: inherit;
   font-size: 0.8rem;
   color: var(--muted);
@@ -200,7 +204,20 @@ main {
 .card > h2 { margin-bottom: 0.6rem; }
 
 /* ---- Aktuelles Wetter ---- */
-.place { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.place { display: flex; align-items: center; gap: 0.5rem; }
+.place-viewport { flex: 1; min-width: 0; overflow: hidden; }
+.place-track { display: flex; width: 300%; will-change: transform; }
+.place-slide {
+  flex: 0 0 calc(100% / 3);
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.place-slide h2, .place-slide .place-name { font-size: 1.1rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.place-detail { overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
 .now { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0; }
 .now-icon { font-size: 3.4rem; line-height: 1; }
 .now-temp { font-size: 3rem; font-weight: 650; line-height: 1; }
@@ -531,3 +548,46 @@ main {
 .dc-feels { color: var(--feels); font-size: 0.75rem; }
 .dc-amount { color: var(--text-2); font-size: 0.75rem; }
 .dc-amount::after { content: ' mm'; font-size: 0.65rem; }
+
+/* ---- Sonne / Solar ---- */
+.dc-stats.dc-stats-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 620px) {
+  .dc-stats.dc-stats-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.dc-swatch-bar { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.dc-swatch-sun { background: var(--sun); }
+.dc-bar-sun { fill: var(--sun); }
+.dc-night { fill: var(--night); }
+.dc-cloud { color: var(--text-2); font-size: 0.7rem; }
+.day-sun { color: var(--text-2); font-size: 0.85rem; margin-left: 0.25rem; }
+.solar-table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.solar-table th, .solar-table td {
+  padding: 0.45rem 0.25rem;
+  text-align: right;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+}
+.solar-table thead th { border-top: 0; color: var(--muted); font-weight: 500; font-size: 0.75rem; }
+.solar-table th:first-child { text-align: left; }
+.solar-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 0.75rem;
+}
+.solar-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--text-2); }
+.solar-form input, .solar-form select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}

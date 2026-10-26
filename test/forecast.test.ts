@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { cached } from '../src/cache';
 import { forecastUrl, parseForecast } from '../src/forecast';
 import { formatWarnings } from '../src/map';
+import { normalizeSolar, toOpenMeteoAzimuth } from '../src/solar-settings';
 import { compass, describeWeather } from '../src/weathercodes';
 
 describe('forecast', () => {
-  it('baut die Open-Meteo-URL mit best_match', () => {
-    const url = new URL(forecastUrl(52.52, 13.405));
+  it('baut die Open-Meteo-URL mit best_match und Modulausrichtung', () => {
+    const url = new URL(forecastUrl(52.52, 13.405, { tilt: 35, bearing: 90, kwp: null }));
+    expect(url.searchParams.get('tilt')).toBe('35');
+    expect(url.searchParams.get('azimuth')).toBe('-90'); // Ost
     expect(url.searchParams.get('models')).toBe('best_match');
     expect(url.searchParams.get('daily')).toContain('precipitation_probability_max');
   });
@@ -33,6 +36,9 @@ describe('forecast', () => {
         precipitation: hours.map(() => 0),
         weather_code: hours.map(() => 3),
         is_day: hours.map(() => 1),
+        // 26.10.: 10 Stunden à 300 W/m² = 3 kWh/m²; ein negativer Ausreißer wird ignoriert
+        global_tilted_irradiance: hours.map((_, i) => (i < 24 && i >= 8 && i < 18 ? 300 : i === 20 ? -2 : 0)),
+        cloud_cover: hours.map(() => 40),
       },
       daily: {
         time: ['2026-10-26'],
@@ -44,6 +50,11 @@ describe('forecast', () => {
         wind_speed_10m_max: [20],
         wind_gusts_10m_max: [40],
         wind_direction_10m_dominant: [270],
+        sunrise: ['2026-10-26T07:02'],
+        sunset: ['2026-10-26T16:51'],
+        daylight_duration: [35340],
+        sunshine_duration: [12600],
+        uv_index_max: [1.5],
       },
     });
     expect(f.hourly).toHaveLength(24);
@@ -53,6 +64,8 @@ describe('forecast', () => {
     expect(f.hourlyDetail[0]).toMatchObject({ apparentTemperature: 3, weatherCode: 3, isDay: true });
     expect(f.current.isDay).toBe(false);
     expect(f.daily[0].precipitationProbability).toBe(70);
+    expect(f.solar[0]).toMatchObject({ sunrise: '2026-10-26T07:02', sunshine: 12600, panelKwhM2: 3 });
+    expect(f.hourlyDetail.every((h) => h.gti >= 0)).toBe(true);
   });
 });
 
@@ -81,5 +94,20 @@ describe('Hilfsfunktionen', () => {
     expect(formatWarnings([])).toMatch(/Keine amtliche Warnung/);
     const html = formatWarnings([{ properties: { EVENT: 'STURMBÖEN', HEADLINE: 'Amtliche WARNUNG vor <STURMBÖEN>' } }]);
     expect(html).toContain('&#60;STURMBÖEN&#62;');
+  });
+});
+
+describe('Solar-Einstellungen', () => {
+  it('rechnet Kompassrichtung in den Open-Meteo-Azimut um (0 = Süd, −90 = Ost, 90 = West)', () => {
+    expect(toOpenMeteoAzimuth(180)).toBe(0);
+    expect(toOpenMeteoAzimuth(90)).toBe(-90);
+    expect(toOpenMeteoAzimuth(270)).toBe(90);
+    expect(Math.abs(toOpenMeteoAzimuth(0))).toBe(180);
+    expect(toOpenMeteoAzimuth(135)).toBe(-45);
+  });
+
+  it('begrenzt ungültige Eingaben', () => {
+    expect(normalizeSolar({ tilt: 120, bearing: -90, kwp: -3 })).toEqual({ tilt: 90, bearing: 270, kwp: null });
+    expect(normalizeSolar({ tilt: NaN, bearing: 200.4, kwp: 9.8 })).toEqual({ tilt: 30, bearing: 200, kwp: 9.8 });
   });
 });
