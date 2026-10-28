@@ -32,9 +32,10 @@ describe('forecast', () => {
         time: hours,
         temperature_2m: hours.map((_, i) => i),
         apparent_temperature: hours.map((_, i) => i - 2),
-        precipitation_probability: hours.map(() => 50),
-        precipitation: hours.map(() => 0),
-        weather_code: hours.map(() => 3),
+        precipitation_probability: hours.map((_, i) => (i < 5 ? 90 : i === 7 ? 30 : 10)),
+        // Regen nur heute früh (bis 05:00), danach trocken
+        precipitation: hours.map((_, i) => (i < 5 ? 0.4 : 0)),
+        weather_code: hours.map((_, i) => (i < 5 ? 61 : 3)),
         is_day: hours.map(() => 1),
         // 26.10.: 10 Stunden à 300 W/m² = 3 kWh/m²; ein negativer Ausreißer wird ignoriert
         global_tilted_irradiance: hours.map((_, i) => (i < 24 && i >= 8 && i < 18 ? 300 : i === 20 ? -2 : 0)),
@@ -63,7 +64,8 @@ describe('forecast', () => {
     expect(f.hourlyDetail).toHaveLength(43);
     expect(f.hourlyDetail[0]).toMatchObject({ apparentTemperature: 3, weatherCode: 3, isDay: true });
     expect(f.current.isDay).toBe(false);
-    expect(f.daily[0].precipitationProbability).toBe(70);
+    // „Heute“: Tageswerte der API (70 %, 1,2 mm, Regen) durch die restlichen Stunden ersetzt
+    expect(f.daily[0]).toMatchObject({ precipitationProbability: 30, precipitationSum: 0, weatherCode: 3, tempMax: 10 });
     expect(f.solar[0]).toMatchObject({ sunrise: '2026-10-26T07:02', sunshine: 12600, panelKwhM2: 3 });
     expect(f.hourlyDetail.every((h) => h.gti >= 0)).toBe(true);
   });

@@ -120,7 +120,9 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
 - **Vorhersage** (Open-Meteo, `models=best_match`, in Deutschland DWD ICON): aktuelle und gefühlte
   Temperatur, Wetterzustand (WMO-Code → Icon), Wind und Böen, Niederschlag. Dazu ein 24-h-Diagramm
   (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme mit gemeinsamer Zeitachse;
-  Antippen zeigt Details) und eine 7-Tage-Liste. Antworten werden 10 Minuten gecacht (Speicher +
+  Antippen zeigt Details) und eine 7-Tage-Liste. Bei „Heute“ beziehen sich Wetter-Icon, Niederschlagsmenge
+  und Regenwahrscheinlichkeit nur auf die restlichen Stunden des Tages, passend zum Tab „Regen“; Regen von
+  heute früh zählt dort nicht mehr mit. Tiefst- und Höchstwert gelten für den ganzen Tag. Antworten werden 10 Minuten gecacht (Speicher +
   `localStorage`).
 - **Tabs Radar / Temperatur / Regen / Sonne**: Neben der Radarkarte gibt es drei weitere Tabs mit den
   nächsten 48 Stunden.
