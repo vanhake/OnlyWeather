@@ -45,6 +45,7 @@ export interface Forecast {
   hourly: Hour[];
   /** Nächste 48 h ab der aktuellen Stunde, für die Detail-Tabs */
   hourlyDetail: Hour[];
+  /** Tageswerte; bei „Heute“ beziehen sich Wetter und Niederschlag nur auf die restlichen Stunden */
   daily: {
     date: string;
     weatherCode: number;
@@ -173,6 +174,19 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
     };
   });
   const d = r.daily;
+  // Für „Heute“ zählen nur die restlichen Stunden: Open-Meteo bezieht die Tageswerte auf den ganzen
+  // Tag, sodass Regen von heute früh sonst noch in der Liste stünde, obwohl der Tab „Regen“ ab jetzt
+  // trocken zeigt. Gleiche Stunden wie dort (ab der aktuellen Stunde).
+  const rest = hourlyDetail.filter((x) => x.time.slice(0, 10) === d.time[0]);
+  const restProbs = rest.map((x) => x.precipitationProbability).filter((p): p is number => p !== null);
+  const today =
+    rest.length > 0
+      ? {
+          weatherCode: Math.max(...rest.map((x) => x.weatherCode)),
+          precipitationSum: Math.round(rest.reduce((sum, x) => sum + x.precipitation, 0) * 10) / 10,
+          precipitationProbability: restProbs.length > 0 ? Math.max(...restProbs) : null,
+        }
+      : null;
   // Tagessumme der Modul-Einstrahlung aus den Stundenwerten (W/m² × 1 h → Wh/m²)
   const panelWh = new Map<string, number>();
   h.time.forEach((t, i) => {
@@ -203,6 +217,7 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       windSpeedMax: d.wind_speed_10m_max[i],
       windGustsMax: d.wind_gusts_10m_max[i],
       windDirection: d.wind_direction_10m_dominant[i],
+      ...(i === 0 && today ? today : {}),
     })),
     solar: d.time.map((date, i) => ({
       date,

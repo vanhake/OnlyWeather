@@ -27,7 +27,8 @@ export function renderHourlyChart(container: HTMLElement, hours: Forecast['hourl
   // In echter Pixelbreite zeichnen, damit die Schrift auf dem Handy nicht mitschrumpft.
   const W = Math.max(280, Math.round(container.clientWidth || 640));
   const padX = 14;
-  const tempTop = 22;
+  // Platz über der Linie, damit die Max-Beschriftung den Titel nicht überdeckt
+  const tempTop = 34;
   const tempH = 70;
   const rainTop = tempTop + tempH + 38;
   const rainH = 40;
