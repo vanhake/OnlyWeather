@@ -93,7 +93,11 @@ secret* anlegen:
 | `ANDROID_KEY_ALIAS` | `onlyweather` |
 | `ANDROID_KEY_PASSWORD` | Passwort des Schlüssels (bei PKCS12 identisch mit dem Keystore-Passwort) |
 
-Fehlt ein Secret, bricht der Release-Workflow mit einer Meldung ab, die das fehlende Secret nennt.
+Vor dem Build prüft der Workflow die Secrets (`scripts/check-release-keystore.sh`): Er öffnet den
+Keystore, sucht den Alias und entschlüsselt den Schlüssel so, wie Gradle es tut. Stimmt etwas nicht,
+bricht er nach wenigen Sekunden mit einer Meldung ab, die das betroffene Secret nennt. Bei falschem Alias
+listet sie die Aliase im Keystore auf. Leerzeichen und Zeilenumbrüche am Anfang oder Ende der Secrets
+werden ignoriert.
 Die `.jks`-Datei und die Passwörter sicher aufbewahren (z. B. im Passwortmanager) und nie ins
 Repository legen. Geht der Schlüssel verloren, kann keine Update-fähige Version mehr erscheinen.
 

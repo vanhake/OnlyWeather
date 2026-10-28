@@ -61,33 +61,24 @@ jobs:
             exit 1
           fi
 
+      # Java zuerst, damit die Schlüsselprüfung vor dem langen Build läuft
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
       - name: Signaturschlüssel prüfen
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          missing=""
-          [ -z "$KEYSTORE_BASE64" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
-          [ -z "$KEYSTORE_PASSWORD" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
-          [ -z "$KEY_ALIAS" ] && missing="$missing ANDROID_KEY_ALIAS"
-          [ -z "$KEY_PASSWORD" ] && missing="$missing ANDROID_KEY_PASSWORD"
-          if [ -n "$missing" ]; then
-            echo "::error::Fehlende Repository-Secrets:$missing – siehe README, Abschnitt Release."
-            exit 1
-          fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+        run: scripts/check-release-keystore.sh "$RUNNER_TEMP/release.jks"
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 21
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -109,7 +100,14 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease bundleRelease --no-daemon
+        run: |
+          # Wie in check-release-keystore.sh: Leerzeichen und Zeilenumbrüche am Rand ignorieren
+          for name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            v="${!name}"
+            v="${v#"${v%%[![:space:]]*}"}"
+            export "$name=${v%"${v##*[![:space:]]}"}"
+          done
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
       - name: Signatur prüfen und Dateien benennen
         id: files
