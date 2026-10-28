@@ -5,6 +5,31 @@ animiertes DWD-Regenradar mit 2-h-Nowcast, Blitzdichte und amtliche Unwetterwarn
 Vite + TypeScript + Leaflet, kein Backend außer einem optionalen Mini-Proxy.
 Alle Datenquellen sind kostenlos und brauchen keinen API-Key.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/uebersicht.png" width="240" alt="Aktuelles Wetter mit 24-h-Verlauf"></td>
+    <td align="center"><img src="docs/screenshots/radar.jpg" width="240" alt="DWD-Regenradar mit Zeitleiste"></td>
+    <td align="center"><img src="docs/screenshots/7-tage.png" width="240" alt="7-Tage-Vorhersage"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Übersicht</b><br>aktuelles Wetter, Sonnenzeiten,<br>24-h-Temperatur und Regenwahrscheinlichkeit</td>
+    <td align="center"><b>Radar</b><br>DWD-Radar mit Zeitleiste: Beobachtung<br>(durchgezogen) und Nowcast (gestrichelt)</td>
+    <td align="center"><b>7 Tage</b><br>Tiefst-/Höchstwert, Sonnenstunden,<br>Niederschlag, Wind</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/temperatur.png" width="240" alt="Tab Temperatur"></td>
+    <td align="center"><img src="docs/screenshots/regen.png" width="240" alt="Tab Regen"></td>
+    <td align="center"><img src="docs/screenshots/sonne.png" width="240" alt="Tab Sonne mit Solarertrag"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Temperatur</b><br>48 h Temperatur und gefühlte<br>Temperatur mit Stundenwerten</td>
+    <td align="center"><b>Regen</b><br>Aussicht, Mengen und<br>Wahrscheinlichkeit pro Stunde</td>
+    <td align="center"><b>Sonne</b><br>Sonnenzeiten, UV-Index, Einstrahlung<br>auf die Module und Ertragsschätzung</td>
+  </tr>
+</table>
+
 ## Start
 
 Voraussetzung: Node.js ≥ 20.
@@ -97,7 +122,8 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
   (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme mit gemeinsamer Zeitachse;
   Antippen zeigt Details) und eine 7-Tage-Liste. Antworten werden 10 Minuten gecacht (Speicher +
   `localStorage`).
-- **Tabs Regenradar / Temperatur / Regen**: Die Karte hat zwei weitere Tabs mit den nächsten 48 Stunden.
+- **Tabs Radar / Temperatur / Regen / Sonne**: Neben der Radarkarte gibt es drei weitere Tabs mit den
+  nächsten 48 Stunden.
   Diagramm und Werteleiste lassen sich seitlich scrollen, Antippen hebt eine Stunde hervor.
   - *Temperatur*: Höchst- und Tiefstwert mit Zeitpunkt, Spanne der gefühlten Temperatur, Verlauf von
     Temperatur und gefühlter Temperatur, pro Stunde Wetter-Icon und Werte.
@@ -105,7 +131,8 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
     höchste Wahrscheinlichkeit mit Zeitpunkt. Dazu je ein Balkendiagramm für Wahrscheinlichkeit und
     Menge sowie die Stundenwerte.
   - *Sonne*: Sonnenauf- und -untergang, Tageslänge, UV-Index, voraussichtliche Sonnenstunden,
-    Einstrahlung auf die Solarmodule (stündlich für 48 h, als Summe für 7 Tage). Unter „Solaranlage
+    Einstrahlung auf die Solarmodule (stündlich für 48 h mit Bewölkung in %, als Summe für 7 Tage;
+    die Tabelle zeigt pro Tag Auf-/Untergang, Sonnenstunden, Ertrag in kWh und UV-Index). Unter „Solaranlage
     einstellen“ werden Ausrichtung (Himmelsrichtung), Neigung und optional die Leistung in kWp
     hinterlegt. Daraus fragt die App bei Open-Meteo die Einstrahlung auf genau diese Modulebene ab
     (`global_tilted_irradiance` mit `tilt` und `azimuth`, Azimut 0 = Süd, −90 = Ost, 90 = West). Mit
