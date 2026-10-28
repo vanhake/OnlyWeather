@@ -121,7 +121,13 @@ jobs:
             echo "::error::Keine signierte APK erzeugt (app-release.apk fehlt) – Signaturkonfiguration prüfen."
             exit 1
           fi
-          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          # Entscheidend ist der Exit-Code von apksigner; die Ausgabe nur filtern, nie verschlucken
+          if ! SIGNERS=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1); then
+            echo "$SIGNERS"
+            echo "::error::Die Signatur der APK ist ungültig (apksigner verify)."
+            exit 1
+          fi
+          echo "$SIGNERS" | grep -E "certificate (DN|SHA-256)" || echo "$SIGNERS"
           mkdir -p out
           cp "$APK" "out/OnlyWeather-$VERSION.apk"
           cp "$AAB" "out/OnlyWeather-$VERSION.aab"
