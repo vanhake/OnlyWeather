@@ -69,17 +69,46 @@ export function attachHover(scroller: HTMLElement, svg: SVGSVGElement, strip: HT
   scroller.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && clear());
 }
 
+/** Vergangene Stunden (vor nowIndex) hinterlegen und „Jetzt“ als Linie markieren. */
+export function pastMarker(svg: SVGSVGElement, nowIndex: number, top: number, bottom: number): void {
+  if (nowIndex <= 0) return;
+  el('rect', { x: 0, y: top, width: COL * nowIndex, height: bottom - top, class: 'dc-past' }, svg);
+  el('line', { x1: COL * nowIndex, x2: COL * nowIndex, y1: top - 14, y2: bottom, class: 'dc-now' }, svg);
+}
+
+/** CSS-Klassen einer Stundenzelle der Werteleiste. */
+export function cellClass(h: Hour, i: number, nowIndex: number): string {
+  return `dc-cell${hourOf(h) === 0 && i > 0 ? ' dc-cell-day' : ''}${i < nowIndex ? ' dc-cell-past' : ''}`;
+}
+
+/** Beschriftung der Stundenzelle: „Jetzt“ für die aktuelle Stunde, sonst die Uhrzeit. */
+export function cellTime(h: Hour, i: number, nowIndex: number): string {
+  return i === nowIndex ? 'Jetzt' : h.time.slice(11, 13);
+}
+
+/**
+ * Scrollt neu gezeichnete Stundenleisten so, dass „Jetzt“ links (mit einer Stunde Vorlauf) steht.
+ * Leisten in verborgenen Tabs haben noch keine Breite; sie werden beim nächsten Aufruf positioniert.
+ */
+export function scrollToNow(container: ParentNode): void {
+  for (const s of container.querySelectorAll<HTMLElement>('.dc-scroll[data-now]')) {
+    if (s.clientWidth === 0) continue;
+    s.scrollLeft = Math.max(0, (Number(s.dataset.now) - 1) * COL);
+    delete s.dataset.now;
+  }
+}
+
 export function stat(label: string, value: string, sub = ''): string {
   return `<div class="dc-stat"><span class="dc-stat-label">${label}</span><strong>${value}</strong>${
     sub ? `<span class="dc-stat-sub">${sub}</span>` : ''
   }</div>`;
 }
 
-export function frame(container: HTMLElement, summary: string, legend: string, n: number) {
+export function frame(container: HTMLElement, summary: string, legend: string, n: number, nowIndex = 0) {
   container.innerHTML = `
     <div class="dc-stats">${summary}</div>
     ${legend ? `<div class="dc-legend">${legend}</div>` : ''}
-    <div class="dc-scroll" tabindex="0" aria-label="Stundenwerte, seitlich scrollbar">
+    <div class="dc-scroll" tabindex="0" data-now="${nowIndex}" aria-label="Stundenwerte, seitlich scrollbar">
       <div class="dc-inner" style="width:${n * COL}px"></div>
     </div>`;
   const scroller = container.querySelector<HTMLElement>('.dc-scroll')!;
@@ -87,12 +116,14 @@ export function frame(container: HTMLElement, summary: string, legend: string, n
   const strip = document.createElement('div');
   strip.className = 'dc-strip';
   strip.style.gridTemplateColumns = `repeat(${n}, ${COL}px)`;
+  // Erst nach dem Einhängen von Diagramm und Leiste scrollbar; sichtbar ist der Tab evtl. erst später.
+  requestAnimationFrame(() => scrollToNow(container));
   return { scroller, inner, strip };
 }
 
 // ---- Temperatur --------------------------------------------------------------------------
 
-export function renderTemperatureDetail(container: HTMLElement, hours: Hour[]): void {
+export function renderTemperatureDetail(container: HTMLElement, hours: Hour[], nowIndex = 0): void {
   if (hours.length < 2) {
     container.innerHTML = '<p class="muted">Keine Stundenwerte verfügbar.</p>';
     return;
@@ -103,14 +134,23 @@ export function renderTemperatureDetail(container: HTMLElement, hours: Hour[]): 
   const feels = hours.map((h) => h.apparentTemperature);
   const iMax = temps.indexOf(Math.max(...temps));
   const iMin = temps.indexOf(Math.min(...temps));
+  // Kennzahlen blicken nach vorn (ab jetzt); das Diagramm zeigt zusätzlich den bisherigen Tag.
+  const ahead = temps.slice(nowIndex);
+  const feelsAhead = feels.slice(nowIndex);
+  const jMax = nowIndex + ahead.indexOf(Math.max(...ahead));
+  const jMin = nowIndex + ahead.indexOf(Math.min(...ahead));
 
   const summary =
-    stat('Höchstwert', `${Math.round(temps[iMax])}°`, when(hours[iMax], first)) +
-    stat('Tiefstwert', `${Math.round(temps[iMin])}°`, when(hours[iMin], first)) +
-    stat('Gefühlt', `${Math.round(Math.min(...feels))}° bis ${Math.round(Math.max(...feels))}°`, `nächste ${n} h`);
+    stat('Höchstwert', `${Math.round(temps[jMax])}°`, when(hours[jMax], first)) +
+    stat('Tiefstwert', `${Math.round(temps[jMin])}°`, when(hours[jMin], first)) +
+    stat(
+      'Gefühlt',
+      `${Math.round(Math.min(...feelsAhead))}° bis ${Math.round(Math.max(...feelsAhead))}°`,
+      `nächste ${ahead.length} h`,
+    );
   const legend = `<span class="dc-key"><i class="dc-swatch dc-swatch-temp"></i>Temperatur</span>
     <span class="dc-key"><i class="dc-swatch dc-swatch-feels"></i>Gefühlt</span>`;
-  const { scroller, inner, strip } = frame(container, summary, legend, n);
+  const { scroller, inner, strip } = frame(container, summary, legend, n, nowIndex);
 
   const W = n * COL;
   const top = 24;
@@ -131,8 +171,9 @@ export function renderTemperatureDetail(container: HTMLElement, hours: Hour[]): 
     viewBox: `0 0 ${W} ${H}`,
     class: 'dc-svg',
     role: 'img',
-    'aria-label': `Temperaturverlauf der nächsten ${n} Stunden`,
+    'aria-label': `Temperaturverlauf ab heute 0 Uhr, ${n - nowIndex} Stunden ab jetzt`,
   });
+  pastMarker(svg, nowIndex, top, top + plotH);
   // Dezente Hilfslinie bei 0 °C, wenn Frost im Bereich liegt
   if (lo < 0 && hi > 0) {
     el('line', { x1: 0, x2: W, y1: y(0), y2: y(0), class: 'dc-zero' }, svg);
@@ -154,8 +195,8 @@ export function renderTemperatureDetail(container: HTMLElement, hours: Hour[]): 
   strip.innerHTML = hours
     .map((h, i) => {
       const w = describeWeather(h.weatherCode, h.isDay);
-      return `<div class="dc-cell${hourOf(h) === 0 && i > 0 ? ' dc-cell-day' : ''}">
-        <span class="dc-time">${i === 0 ? 'Jetzt' : `${h.time.slice(11, 13)}`}</span>
+      return `<div class="${cellClass(h, i, nowIndex)}">
+        <span class="dc-time">${cellTime(h, i, nowIndex)}</span>
         <span class="dc-icon" title="${w.text}" role="img" aria-label="${w.text}">${w.icon}</span>
         <strong>${Math.round(h.temperature)}°</strong>
         <span class="dc-feels">${Math.round(h.apparentTemperature)}°</span>
@@ -168,7 +209,7 @@ export function renderTemperatureDetail(container: HTMLElement, hours: Hour[]): 
 
 // ---- Regen -------------------------------------------------------------------------------
 
-export function renderRainDetail(container: HTMLElement, hours: Hour[]): void {
+export function renderRainDetail(container: HTMLElement, hours: Hour[], nowIndex = 0): void {
   if (hours.length < 2) {
     container.innerHTML = '<p class="muted">Keine Stundenwerte verfügbar.</p>';
     return;
@@ -178,27 +219,34 @@ export function renderRainDetail(container: HTMLElement, hours: Hour[]): void {
   const probs = hours.map((h) => h.precipitationProbability ?? 0);
   const amounts = hours.map((h) => h.precipitation);
   const sum = (from: number, to: number) => amounts.slice(from, to).reduce((a, b) => a + b, 0);
-  const iMaxProb = probs.indexOf(Math.max(...probs));
-  const wetIdx = hours.findIndex((h) => (h.precipitationProbability ?? 0) >= 50 || h.precipitation >= 0.2);
-  const dryIdx = wetIdx === 0 ? hours.findIndex((h) => (h.precipitationProbability ?? 0) < 30 && h.precipitation < 0.1) : -1;
+  // Kennzahlen blicken nach vorn (ab jetzt); das Diagramm zeigt zusätzlich den bisherigen Tag.
+  const ahead = hours.slice(nowIndex);
+  const aheadProbs = probs.slice(nowIndex);
+  const iMaxProb = nowIndex + aheadProbs.indexOf(Math.max(...aheadProbs));
+  const wetIdx = ahead.findIndex((h) => (h.precipitationProbability ?? 0) >= 50 || h.precipitation >= 0.2);
+  const dryIdx = wetIdx === 0 ? ahead.findIndex((h) => (h.precipitationProbability ?? 0) < 30 && h.precipitation < 0.1) : -1;
 
   let outlook: string;
   let outlookSub: string;
   if (wetIdx < 0) {
     outlook = 'Trocken';
-    outlookSub = `nächste ${n} h`;
+    outlookSub = `nächste ${ahead.length} h`;
   } else if (wetIdx === 0) {
     outlook = 'Nass';
-    outlookSub = dryIdx > 0 ? `trocken ab ${when(hours[dryIdx], first)}` : `anhaltend`;
+    outlookSub = dryIdx > 0 ? `trocken ab ${when(ahead[dryIdx], first)}` : `anhaltend`;
   } else {
-    outlook = `ab ${hours[wetIdx].time.slice(11, 13)} Uhr`;
-    outlookSub = `Regen erwartet${hours[wetIdx].time.slice(0, 10) === first.time.slice(0, 10) ? '' : ` (${dayName(hours[wetIdx])})`}`;
+    outlook = `ab ${ahead[wetIdx].time.slice(11, 13)} Uhr`;
+    outlookSub = `Regen erwartet${ahead[wetIdx].time.slice(0, 10) === first.time.slice(0, 10) ? '' : ` (${dayName(ahead[wetIdx])})`}`;
   }
   const summary =
     stat('Aussicht', outlook, outlookSub) +
-    stat('Menge 24 h', `${fmt1(sum(0, 24))} mm`, n > 24 ? `danach ${fmt1(sum(24, n))} mm` : '') +
+    stat(
+      'Menge 24 h',
+      `${fmt1(sum(nowIndex, nowIndex + 24))} mm`,
+      ahead.length > 24 ? `danach ${fmt1(sum(nowIndex + 24, n))} mm` : '',
+    ) +
     stat('Maximum', `${probs[iMaxProb]} %`, when(hours[iMaxProb], first));
-  const { scroller, inner, strip } = frame(container, summary, '', n);
+  const { scroller, inner, strip } = frame(container, summary, '', n, nowIndex);
 
   const W = n * COL;
   const probTop = 34;
@@ -215,8 +263,9 @@ export function renderRainDetail(container: HTMLElement, hours: Hour[]): void {
     viewBox: `0 0 ${W} ${H}`,
     class: 'dc-svg',
     role: 'img',
-    'aria-label': `Regenwahrscheinlichkeit und Regenmenge der nächsten ${n} Stunden`,
+    'aria-label': `Regenwahrscheinlichkeit und Regenmenge ab heute 0 Uhr, ${n - nowIndex} Stunden ab jetzt`,
   });
+  pastMarker(svg, nowIndex, probTop, amtTop + amtH);
   el('text', { x: 4, y: 12, class: 'dc-title' }, svg).textContent = 'Wahrscheinlichkeit %';
   el('text', { x: 4, y: amtTop - 10, class: 'dc-title' }, svg).textContent = `Menge mm/h (Skala bis ${fmt1(maxAmt)})`;
   for (const p of [50, 100]) {
@@ -237,8 +286,8 @@ export function renderRainDetail(container: HTMLElement, hours: Hour[]): void {
 
   strip.innerHTML = hours
     .map(
-      (h, i) => `<div class="dc-cell${hourOf(h) === 0 && i > 0 ? ' dc-cell-day' : ''}">
-        <span class="dc-time">${i === 0 ? 'Jetzt' : h.time.slice(11, 13)}</span>
+      (h, i) => `<div class="${cellClass(h, i, nowIndex)}">
+        <span class="dc-time">${cellTime(h, i, nowIndex)}</span>
         <strong>${h.precipitationProbability ?? '–'}%</strong>
         <span class="dc-amount">${h.precipitation > 0 ? fmt1(h.precipitation) : '0'}</span>
       </div>`,

@@ -41,11 +41,13 @@ export interface Forecast {
     windGusts: number;
     windDirection: number;
   };
-  /** Nächste 24 h ab der aktuellen Stunde */
+  /** Heute ab 00:00 Uhr bis 24 h nach der aktuellen Stunde */
   hourly: Hour[];
-  /** Nächste 48 h ab der aktuellen Stunde, für die Detail-Tabs */
+  /** Heute ab 00:00 Uhr bis 48 h nach der aktuellen Stunde, für die Detail-Tabs */
   hourlyDetail: Hour[];
-  /** Tageswerte; bei „Heute“ beziehen sich Wetter und Niederschlag nur auf die restlichen Stunden */
+  /** Index der aktuellen Stunde in hourly und hourlyDetail (davor liegt Vergangenes) */
+  nowIndex: number;
+  /** Tageswerte, jeweils für den ganzen Tag */
   daily: {
     date: string;
     weatherCode: number;
@@ -151,42 +153,53 @@ export function forecastUrl(lat: number, lon: number, solar: SolarSettings = DEF
   return `${OPEN_METEO_FORECAST}?${params}`;
 }
 
+/**
+ * Wettersymbol für einen ganzen Tag.
+ *
+ * Open-Meteo liefert als Tages-weather_code den „schwersten“ Code des Tages: Eine einzige bedeckte
+ * Stunde macht den ganzen Tag zu „Bedeckt“, eine Stunde Frühnebel zu „Nebel“ – auch bei 8 h Sonne.
+ * Niederschlag und Gewitter (Code ≥ 51) bleiben deshalb erhalten; für trockene Tage richtet sich das
+ * Symbol nach dem Anteil der Sonnenstunden an der Tageslänge, damit es zur angezeigten Sonnenscheindauer
+ * passt. Nebel nur, wenn er den überwiegenden Teil der hellen Stunden anhält.
+ */
+export function dailyWeatherCode(apiCode: number, sunshine: number, daylight: number, dayCodes: number[]): number {
+  if (apiCode >= 51 || !(daylight > 0)) return apiCode;
+  const ratio = sunshine / daylight;
+  if (ratio >= 0.75) return 0;
+  if (ratio >= 0.5) return 1;
+  if (ratio >= 0.25) return 2;
+  const fog = dayCodes.filter((c) => c === 45 || c === 48).length;
+  if (dayCodes.length > 0 && fog > dayCodes.length / 2) return dayCodes.includes(48) ? 48 : 45;
+  return 3;
+}
+
 export function parseForecast(r: OpenMeteoResponse): Forecast {
   const c = r.current;
   // Open-Meteo liefert Ortszeit ohne Offset; die aktuelle Stunde ist der Präfix von current.time.
   const currentHour = c.time.slice(0, 13);
-  let start = r.hourly.time.findIndex((t) => t.slice(0, 13) === currentHour);
-  if (start < 0) start = 0;
   const h = r.hourly;
-  const hourlyDetail: Hour[] = h.time.slice(start, start + 48).map((time, k) => {
-    const i = start + k;
-    return {
-      time,
-      temperature: h.temperature_2m[i],
-      apparentTemperature: h.apparent_temperature[i],
-      precipitationProbability: h.precipitation_probability[i],
-      precipitation: h.precipitation[i],
-      weatherCode: h.weather_code[i],
-      isDay: h.is_day[i] === 1,
-      // Vereinzelt liefert die API leicht negative Werte; physikalisch ist das 0.
-      gti: Math.max(0, h.global_tilted_irradiance[i] ?? 0),
-      cloudCover: h.cloud_cover[i],
-    };
+  let now = h.time.findIndex((t) => t.slice(0, 13) === currentHour);
+  if (now < 0) now = 0;
+  // Ab Mitternacht des aktuellen Tages, damit auch der bisherige Tagesverlauf sichtbar bleibt.
+  const today = c.time.slice(0, 10);
+  let start = h.time.findIndex((t) => t.slice(0, 10) === today);
+  if (start < 0 || start > now) start = now;
+  const toHour = (i: number): Hour => ({
+    time: h.time[i],
+    temperature: h.temperature_2m[i],
+    apparentTemperature: h.apparent_temperature[i],
+    precipitationProbability: h.precipitation_probability[i],
+    precipitation: h.precipitation[i],
+    weatherCode: h.weather_code[i],
+    isDay: h.is_day[i] === 1,
+    // Vereinzelt liefert die API leicht negative Werte; physikalisch ist das 0.
+    gti: Math.max(0, h.global_tilted_irradiance[i] ?? 0),
+    cloudCover: h.cloud_cover[i],
   });
+  const range = (from: number, to: number) =>
+    Array.from({ length: Math.max(0, Math.min(to, h.time.length) - from) }, (_, k) => toHour(from + k));
+  const hourlyDetail = range(start, now + 48);
   const d = r.daily;
-  // Für „Heute“ zählen nur die restlichen Stunden: Open-Meteo bezieht die Tageswerte auf den ganzen
-  // Tag, sodass Regen von heute früh sonst noch in der Liste stünde, obwohl der Tab „Regen“ ab jetzt
-  // trocken zeigt. Gleiche Stunden wie dort (ab der aktuellen Stunde).
-  const rest = hourlyDetail.filter((x) => x.time.slice(0, 10) === d.time[0]);
-  const restProbs = rest.map((x) => x.precipitationProbability).filter((p): p is number => p !== null);
-  const today =
-    rest.length > 0
-      ? {
-          weatherCode: Math.max(...rest.map((x) => x.weatherCode)),
-          precipitationSum: Math.round(rest.reduce((sum, x) => sum + x.precipitation, 0) * 10) / 10,
-          precipitationProbability: restProbs.length > 0 ? Math.max(...restProbs) : null,
-        }
-      : null;
   // Tagessumme der Modul-Einstrahlung aus den Stundenwerten (W/m² × 1 h → Wh/m²)
   const panelWh = new Map<string, number>();
   h.time.forEach((t, i) => {
@@ -205,11 +218,17 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       windGusts: c.wind_gusts_10m,
       windDirection: c.wind_direction_10m,
     },
-    hourly: hourlyDetail.slice(0, 24),
+    hourly: range(start, now + 24),
     hourlyDetail,
+    nowIndex: now - start,
     daily: d.time.map((date, i) => ({
       date,
-      weatherCode: d.weather_code[i],
+      weatherCode: dailyWeatherCode(
+        d.weather_code[i],
+        d.sunshine_duration[i],
+        d.daylight_duration[i],
+        h.weather_code.filter((_, k) => h.time[k].slice(0, 10) === date && h.is_day[k] === 1),
+      ),
       tempMax: d.temperature_2m_max[i],
       tempMin: d.temperature_2m_min[i],
       precipitationSum: d.precipitation_sum[i],
@@ -217,7 +236,6 @@ export function parseForecast(r: OpenMeteoResponse): Forecast {
       windSpeedMax: d.wind_speed_10m_max[i],
       windGustsMax: d.wind_gusts_10m_max[i],
       windDirection: d.wind_direction_10m_dominant[i],
-      ...(i === 0 && today ? today : {}),
     })),
     solar: d.time.map((date, i) => ({
       date,

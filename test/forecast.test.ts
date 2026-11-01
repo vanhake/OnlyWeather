@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cached } from '../src/cache';
-import { forecastUrl, parseForecast } from '../src/forecast';
+import { dailyWeatherCode, forecastUrl, parseForecast } from '../src/forecast';
 import { formatWarnings } from '../src/map';
 import { normalizeSolar, toOpenMeteoAzimuth } from '../src/solar-settings';
 import { compass, describeWeather } from '../src/weathercodes';
@@ -14,7 +14,7 @@ describe('forecast', () => {
     expect(url.searchParams.get('daily')).toContain('precipitation_probability_max');
   });
 
-  it('schneidet den Stundenverlauf ab der aktuellen Stunde auf 24 Werte', () => {
+  it('zeigt den Stundenverlauf ab 0 Uhr heute bis 24 h nach der aktuellen Stunde', () => {
     const hours = Array.from({ length: 48 }, (_, i) => `2026-10-26T${String(i % 24).padStart(2, '0')}:00`);
     const f = parseForecast({
       current: {
@@ -58,16 +58,41 @@ describe('forecast', () => {
         uv_index_max: [1.5],
       },
     });
-    expect(f.hourly).toHaveLength(24);
-    expect(f.hourly[0].temperature).toBe(5);
-    // Detailansicht: bis zu 48 h ab der aktuellen Stunde (hier stehen ab 05:00 noch 43 h zur Verfügung)
-    expect(f.hourlyDetail).toHaveLength(43);
-    expect(f.hourlyDetail[0]).toMatchObject({ apparentTemperature: 3, weatherCode: 3, isDay: true });
+    // 00:00–04:00 (Vergangenes) + 24 h ab 05:00
+    expect(f.nowIndex).toBe(5);
+    expect(f.hourly).toHaveLength(29);
+    expect(f.hourly[0].time).toBe('2026-10-26T00:00');
+    expect(f.hourly[f.nowIndex].temperature).toBe(5);
+    // Detailansicht: ab 0 Uhr bis 48 h ab der aktuellen Stunde (die Daten reichen nur bis 23:00 am Folgetag)
+    expect(f.hourlyDetail).toHaveLength(48);
+    expect(f.hourlyDetail[f.nowIndex]).toMatchObject({ apparentTemperature: 3, weatherCode: 3, isDay: true });
     expect(f.current.isDay).toBe(false);
-    // „Heute“: Tageswerte der API (70 %, 1,2 mm, Regen) durch die restlichen Stunden ersetzt
-    expect(f.daily[0]).toMatchObject({ precipitationProbability: 30, precipitationSum: 0, weatherCode: 3, tempMax: 10 });
+    // „Heute“ gilt für den ganzen Tag, inklusive Regen von heute früh
+    expect(f.daily[0]).toMatchObject({ precipitationProbability: 70, precipitationSum: 1.2, tempMax: 10 });
     expect(f.solar[0]).toMatchObject({ sunrise: '2026-10-26T07:02', sunshine: 12600, panelKwhM2: 3 });
     expect(f.hourlyDetail.every((h) => h.gti >= 0)).toBe(true);
+  });
+});
+
+describe('Tagessymbol', () => {
+  const daylight = 10 * 3600;
+  it('richtet trockene Tage nach den Sonnenstunden aus', () => {
+    // API meldet „Bedeckt“, obwohl 8 von 10 h die Sonne scheint
+    expect(dailyWeatherCode(3, 8 * 3600, daylight, [3, 1, 0])).toBe(0);
+    expect(dailyWeatherCode(3, 6 * 3600, daylight, [])).toBe(1);
+    expect(dailyWeatherCode(0, 3 * 3600, daylight, [])).toBe(2);
+    expect(dailyWeatherCode(2, 0, daylight, [3, 3, 2])).toBe(3);
+  });
+
+  it('zeigt Nebel nur bei überwiegend nebligen Stunden', () => {
+    expect(dailyWeatherCode(45, 6.7 * 3600, daylight, [45, 1, 1, 0])).toBe(1);
+    expect(dailyWeatherCode(45, 0, daylight, [45, 45, 45, 3])).toBe(45);
+    expect(dailyWeatherCode(45, 0, daylight, [45, 3, 3, 3])).toBe(3);
+  });
+
+  it('behält Niederschlag und Gewitter bei', () => {
+    expect(dailyWeatherCode(61, 8 * 3600, daylight, [])).toBe(61);
+    expect(dailyWeatherCode(95, 0, daylight, [])).toBe(95);
   });
 });
 

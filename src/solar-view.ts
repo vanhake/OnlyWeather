@@ -1,4 +1,4 @@
-import { attachHover, barPath, COL, cx, dayMarkers, el, frame, stat } from './detail-charts';
+import { attachHover, barPath, cellClass, cellTime, COL, cx, dayMarkers, el, frame, pastMarker, stat } from './detail-charts';
 import type { Forecast } from './forecast';
 import { directionLabel, PERFORMANCE_RATIO, type SolarSettings } from './solar-settings';
 
@@ -36,10 +36,10 @@ export function renderSolar(container: HTMLElement, f: Forecast, s: SolarSetting
     );
   const legend = `<span class="dc-key"><i class="dc-swatch-bar dc-swatch-sun"></i>Einstrahlung auf die Module W/m²</span>
     <span class="dc-key muted">${s.tilt}° geneigt, Richtung ${directionLabel(s.bearing)}</span>`;
-  const { scroller, inner, strip } = frame(container, summary, legend, n);
+  const { scroller, inner, strip } = frame(container, summary, legend, n, f.nowIndex);
   container.querySelector('.dc-stats')!.classList.add('dc-stats-2');
 
-  // ---- Stundenverlauf der Modul-Einstrahlung (48 h) ----
+  // ---- Stundenverlauf der Modul-Einstrahlung (heute ab 0 Uhr bis 48 h ab jetzt) ----
   const W = n * COL;
   const top = 24;
   const plotH = 110;
@@ -51,8 +51,9 @@ export function renderSolar(container: HTMLElement, f: Forecast, s: SolarSetting
     viewBox: `0 0 ${W} ${H}`,
     class: 'dc-svg',
     role: 'img',
-    'aria-label': `Einstrahlung auf die Modulebene der nächsten ${n} Stunden`,
+    'aria-label': `Einstrahlung auf die Modulebene ab heute 0 Uhr, ${n - f.nowIndex} Stunden ab jetzt`,
   });
+  pastMarker(svg, f.nowIndex, top, top + plotH);
   // Nachtstunden dezent hinterlegen
   hourly.forEach((h, i) => {
     if (!h.isDay) el('rect', { x: COL * i, y: top, width: COL, height: plotH, class: 'dc-night' }, svg);
@@ -74,8 +75,8 @@ export function renderSolar(container: HTMLElement, f: Forecast, s: SolarSetting
 
   strip.innerHTML = hourly
     .map(
-      (h, i) => `<div class="dc-cell${h.time.slice(11, 13) === '00' && i > 0 ? ' dc-cell-day' : ''}">
-        <span class="dc-time">${i === 0 ? 'Jetzt' : h.time.slice(11, 13)}</span>
+      (h, i) => `<div class="${cellClass(h, i, f.nowIndex)}">
+        <span class="dc-time">${cellTime(h, i, f.nowIndex)}</span>
         <strong>${h.isDay || h.gti > 0 ? Math.round(h.gti) : '–'}</strong>
         <span class="dc-cloud" title="Bewölkung">☁ ${Math.round(h.cloudCover)}%</span>
       </div>`,

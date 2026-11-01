@@ -122,14 +122,18 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
   oder über die Punkte unter dem Ortsnamen. Beim Wischen gleiten die Ortsnamen mit dem Finger mit. „Entfernen“ löscht den aktuellen Ort. Liste und gewählter
   Ort werden im `localStorage` gespeichert.
 - **Vorhersage** (Open-Meteo, `models=best_match`, in Deutschland DWD ICON): aktuelle und gefühlte
-  Temperatur, Wetterzustand (WMO-Code → Icon), Wind und Böen, Niederschlag. Dazu ein 24-h-Diagramm
-  (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme mit gemeinsamer Zeitachse;
-  Antippen zeigt Details) und eine 7-Tage-Liste. Bei „Heute“ beziehen sich Wetter-Icon, Niederschlagsmenge
-  und Regenwahrscheinlichkeit nur auf die restlichen Stunden des Tages, passend zum Tab „Regen“; Regen von
-  heute früh zählt dort nicht mehr mit. Tiefst- und Höchstwert gelten für den ganzen Tag. Antworten werden 10 Minuten gecacht (Speicher +
+  Temperatur, Wetterzustand (WMO-Code → Icon), Wind und Böen, Niederschlag. Dazu ein Stundendiagramm
+  von heute 0 Uhr bis 24 h nach jetzt (Temperatur und Regenwahrscheinlichkeit als zwei gestapelte Diagramme
+  mit gemeinsamer Zeitachse; vergangene Stunden sind grau hinterlegt, Antippen zeigt Details) und eine
+  7-Tage-Liste, deren Werte jeweils für den ganzen Tag gelten. Das Tagessymbol richtet sich bei trockenen
+  Tagen nach dem Anteil der Sonnenstunden an der Tageslänge (≥ 75 % klar, ≥ 50 % überwiegend klar,
+  ≥ 25 % teilweise bewölkt, sonst bedeckt bzw. Nebel, wenn er die meisten hellen Stunden anhält);
+  Niederschlag und Gewitter zeigt es wie von Open-Meteo gemeldet. Der Tages-`weather_code` von Open-Meteo
+  allein ist der „schwerste“ Code des Tages und zeigt schon bei einer bedeckten Stunde eine Wolke. Antworten werden 10 Minuten gecacht (Speicher +
   `localStorage`).
 - **Tabs Radar / Temperatur / Regen / Sonne**: Neben der Radarkarte gibt es drei weitere Tabs mit den
-  nächsten 48 Stunden.
+  Stundenwerten ab heute 0 Uhr bis 48 h nach jetzt. Beim Öffnen steht „Jetzt“ am linken Rand; nach links
+  gescrollt erscheint der bisherige Tagesverlauf (grau hinterlegt). Die Kennzahlen oben blicken nach vorn.
   Diagramm und Werteleiste lassen sich seitlich scrollen, Antippen hebt eine Stunde hervor.
   - *Temperatur*: Höchst- und Tiefstwert mit Zeitpunkt, Spanne der gefühlten Temperatur, Verlauf von
     Temperatur und gefühlter Temperatur, pro Stunde Wetter-Icon und Werte.
@@ -137,7 +141,7 @@ weiterleiten (z. B. nginx `location /dwd/ { proxy_pass https://maps.dwd.de/; }`)
     höchste Wahrscheinlichkeit mit Zeitpunkt. Dazu je ein Balkendiagramm für Wahrscheinlichkeit und
     Menge sowie die Stundenwerte.
   - *Sonne*: Sonnenauf- und -untergang, Tageslänge, UV-Index, voraussichtliche Sonnenstunden,
-    Einstrahlung auf die Solarmodule (stündlich für 48 h mit Bewölkung in %, als Summe für 7 Tage;
+    Einstrahlung auf die Solarmodule (stündlich ab 0 Uhr bis 48 h nach jetzt mit Bewölkung in %, als Summe für 7 Tage;
     die Tabelle zeigt pro Tag Auf-/Untergang, Sonnenstunden, Ertrag in kWh und UV-Index). Unter „Solaranlage
     einstellen“ werden Ausrichtung (Himmelsrichtung), Neigung und optional die Leistung in kWp
     hinterlegt. Daraus fragt die App bei Open-Meteo die Einstrahlung auf genau diese Modulebene ab

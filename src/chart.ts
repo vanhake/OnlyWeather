@@ -19,8 +19,9 @@ const hourLabel = (iso: string) => iso.slice(11, 13);
  * 24-h-Verlauf als zwei gestapelte Diagramme mit gemeinsamer Zeitachse:
  * oben Temperatur (Linie), unten Regenwahrscheinlichkeit (Balken, 0–100 %).
  * Keine Doppelachse – jede Größe hat ihre eigene Skala.
+ * Beginnt um 00:00 Uhr des aktuellen Tages; Stunden vor nowIndex sind als Vergangenheit hinterlegt.
  */
-export function renderHourlyChart(container: HTMLElement, hours: Forecast['hourly']): void {
+export function renderHourlyChart(container: HTMLElement, hours: Forecast['hourly'], nowIndex = 0): void {
   container.replaceChildren();
   if (hours.length < 2) return;
 
@@ -51,8 +52,15 @@ export function renderHourlyChart(container: HTMLElement, hours: Forecast['hourl
     viewBox: `0 0 ${W} ${H}`,
     class: 'hourly-chart',
     role: 'img',
-    'aria-label': 'Temperatur und Regenwahrscheinlichkeit der nächsten 24 Stunden',
+    'aria-label': 'Temperatur und Regenwahrscheinlichkeit von heute 0 Uhr bis 24 Stunden ab jetzt',
   });
+
+  // Vergangene Stunden dezent hinterlegen, „Jetzt“ als Linie
+  if (nowIndex > 0) {
+    el('rect', { x: padX, y: tempTop - 4, width: step * nowIndex, height: rainTop + rainH - tempTop + 4, class: 'chart-past' }, svg);
+    const nx = cx(nowIndex) - step / 2;
+    el('line', { x1: nx, x2: nx, y1: tempTop - 4, y2: rainTop + rainH, class: 'chart-now' }, svg);
+  }
 
   el('text', { x: padX, y: 12, class: 'chart-title' }, svg).textContent = 'Temperatur °C';
   el('text', { x: padX, y: rainTop - 8, class: 'chart-title' }, svg).textContent = 'Regenwahrscheinlichkeit %';
@@ -95,12 +103,14 @@ export function renderHourlyChart(container: HTMLElement, hours: Forecast['hourl
       `${Math.round(temps[i])}°`;
   }
 
-  // Zeitachse: alle 3 Stunden (auf schmalen Bildschirmen alle 6)
-  const every = W < 420 ? 6 : 3;
+  // Zeitachse: volle 3 bzw. 6 Stunden (je nach Platz) plus „Jetzt“; Beschriftungen nah an „Jetzt“ entfallen.
+  const minGap = 34;
+  const every = [3, 6, 12].find((e) => step * e >= minGap) ?? 12;
+  const nowX = cx(nowIndex);
+  el('text', { x: nowX, y: axisY, class: 'chart-axis chart-axis-now', 'text-anchor': 'middle' }, svg).textContent = 'Jetzt';
   hours.forEach((h, i) => {
-    if (i % every !== 0) return;
-    el('text', { x: cx(i), y: axisY, class: 'chart-axis', 'text-anchor': 'middle' }, svg).textContent =
-      i === 0 ? 'Jetzt' : hourLabel(h.time);
+    if (Number(h.time.slice(11, 13)) % every !== 0 || Math.abs(cx(i) - nowX) < minGap) return;
+    el('text', { x: cx(i), y: axisY, class: 'chart-axis', 'text-anchor': 'middle' }, svg).textContent = hourLabel(h.time);
   });
 
   // Hover-Ebene: Fadenkreuz + Tooltip
