@@ -1,6 +1,6 @@
 import './style.css';
 import { renderHourlyChart } from './chart';
-import { renderRainDetail, renderTemperatureDetail } from './detail-charts';
+import { renderRainDetail, renderTemperatureDetail, scrollToNow } from './detail-charts';
 import { loadForecast, type Forecast } from './forecast';
 import { defaultPlace, locateBrowser, searchPlaces, type Place } from './location';
 import { WeatherMap } from './map';
@@ -48,7 +48,7 @@ function renderCurrent(f: Forecast): void {
       }
     </dl>
     <p class="muted small">Stand ${c.time.slice(11, 16)} Uhr Ortszeit · Modell: Open-Meteo best_match (DWD ICON für Deutschland)</p>`;
-  renderHourlyChart($('#hourly'), f.hourly);
+  renderHourlyChart($('#hourly'), f.hourly, f.nowIndex);
 }
 
 function renderDaily(f: Forecast): void {
@@ -83,8 +83,8 @@ async function showForecast(): Promise<void> {
     lastForecast = f;
     renderCurrent(f);
     renderDaily(f);
-    renderTemperatureDetail($('#panel-temp'), f.hourlyDetail);
-    renderRainDetail($('#panel-rain'), f.hourlyDetail);
+    renderTemperatureDetail($('#panel-temp'), f.hourlyDetail, f.nowIndex);
+    renderRainDetail($('#panel-rain'), f.hourlyDetail, f.nowIndex);
     renderSolar($('#solar-content'), f, solar);
   } catch (e) {
     if (token !== loadToken) return;
@@ -373,6 +373,7 @@ function setupTabs(): void {
     }
     if (focus) tab.focus();
     if (tab.id === 'tab-radar') weatherMap?.invalidateSize();
+    else scrollToNow($(`#${tab.getAttribute('aria-controls')}`));
     try {
       localStorage.setItem(TAB_KEY, tab.id);
     } catch {
@@ -482,7 +483,7 @@ function init(): void {
   let resizeTimer: number | undefined;
   window.addEventListener('resize', () => {
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => lastForecast && renderHourlyChart($('#hourly'), lastForecast.hourly), 200);
+    resizeTimer = window.setTimeout(() => lastForecast && renderHourlyChart($('#hourly'), lastForecast.hourly, lastForecast.nowIndex), 200);
   });
 }
 

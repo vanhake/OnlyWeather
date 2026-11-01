@@ -242,6 +242,9 @@ main {
 .chart-temp { fill: none; stroke: var(--temp); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .chart-temp-dot { fill: var(--temp); stroke: var(--surface); stroke-width: 2; }
 .chart-rain { fill: var(--rain); }
+.chart-past { fill: var(--hover); }
+.chart-now { stroke: var(--text-2); stroke-width: 1; }
+.chart-axis-now { fill: var(--text); font-weight: 600; }
 .chart-cross { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 3 3; }
 .chart-tip {
   position: absolute;
@@ -543,6 +546,9 @@ main {
   border-radius: 8px;
 }
 .dc-cell.active { background: var(--hover); }
+.dc-cell-past { opacity: 0.55; }
+.dc-past { fill: var(--hover); }
+.dc-now { stroke: var(--text-2); stroke-width: 1; }
 .dc-cell-day { box-shadow: inset 1px 0 0 var(--border); border-radius: 0; }
 .dc-time { color: var(--muted); font-size: 0.75rem; }
 .dc-icon { font-size: 1.15rem; line-height: 1.2; }
