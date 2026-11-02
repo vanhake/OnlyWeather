@@ -69,7 +69,11 @@ Schlüssel signierte Version und veröffentlicht sie als GitHub-Release mit:
 Release-Versionen lassen sich ohne Deinstallieren übereinander aktualisieren. Der `versionCode`
 wird aus der Versionsnummer berechnet (1.2.3 → 1002003) und steigt so mit jeder Version.
 
-Release starten, auf eine der beiden Arten:
+Release starten, auf eine der drei Arten:
+- **Automatisch bei jedem Push auf `main`**, also auch beim Merge eines PRs: Der Workflow erhöht die
+  letzte Version um eine Patch-Stufe (`v1.0.0` → `v1.0.1`) und legt Tag und Release an. Für eine neue
+  Minor- oder Major-Version (z. B. `1.1.0`) einmal per Hand starten oder taggen; danach zählt die
+  Automatik von dort weiter.
 - *Actions → Release → Run workflow*, Versionsnummer eingeben (z. B. `1.0.0`), optional als
   Vorabversion markieren. Der Workflow legt den Tag `v1.0.0` selbst an.
 - Tag pushen: `git tag v1.0.0 && git push origin v1.0.0`
