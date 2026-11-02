@@ -241,7 +241,7 @@ export class WeatherMap {
           const t = times.filter((x) => x <= target).pop();
           if (t !== undefined) this.lightning.addLayer(make(LIGHTNING_AGES.length - 1 - idx, t));
         });
-      note.innerHTML = `${layer.title}: Farbe nach Alter – <span class="age age-0">0–15</span>
+      note.innerHTML = `${escapeHtml(layer.title)}: Farbe nach Alter – <span class="age age-0">0–15</span>
         <span class="age age-1">15–30</span> <span class="age age-2">30–45</span>
         <span class="age age-3">45–60 min</span>`;
     } else {

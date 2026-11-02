@@ -36,7 +36,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       skip: ${{ steps.version.outputs.skip }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Version bestimmen
         id: version
@@ -95,10 +95,10 @@ jobs:
           fi
           echo "Release $TAG"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Java zuerst, damit die Schlüsselprüfung vor dem langen Build läuft
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 21
@@ -111,12 +111,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: scripts/check-release-keystore.sh "$RUNNER_TEMP/release.jks"
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Abhängigkeiten installieren
         run: npm ci
@@ -170,25 +170,34 @@ jobs:
           (cd out && sha256sum OnlyWeather-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
           rm -f "$RUNNER_TEMP/release.jks"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: OnlyWeather-${{ needs.version.outputs.name }}-release
           path: out/*
           if-no-files-found: error
 
+      # gh statt einer Drittanbieter-Action: der Job hat contents: write und sah die
+      # Signatur-Secrets, fremder Code soll hier nicht laufen.
       - name: GitHub-Release anlegen
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          name: OnlyWeather ${{ needs.version.outputs.name }}
-          prerelease: ${{ inputs.prerelease == true }}
-          generate_release_notes: true
-          body: |
-            **Installation auf Android:** `OnlyWeather-${{ needs.version.outputs.name }}.apk` herunterladen und öffnen
-            (Installation aus unbekannten Quellen erlauben). Updates lassen sich direkt über eine ältere
-            Release-Version installieren. Eine vorher installierte Debug-Version muss einmal deinstalliert werden.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.name }}
+          PRERELEASE: ${{ inputs.prerelease == true }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<NOTES
+          **Installation auf Android:** \`OnlyWeather-$VERSION.apk\` herunterladen und öffnen
+          (Installation aus unbekannten Quellen erlauben). Updates lassen sich direkt über eine ältere
+          Release-Version installieren. Eine vorher installierte Debug-Version muss einmal deinstalliert werden.
 
-            `OnlyWeather-${{ needs.version.outputs.name }}.aab` ist das App Bundle für den Google Play Store.
-            Prüfsummen stehen in `SHA256SUMS.txt`.
-          files: out/*
+          \`OnlyWeather-$VERSION.aab\` ist das App Bundle für den Google Play Store.
+          Prüfsummen stehen in \`SHA256SUMS.txt\`.
+          NOTES
+          args=()
+          [ "$PRERELEASE" = "true" ] && args+=(--prerelease)
+          gh release create "$TAG" out/* \
+            --target "$GITHUB_SHA" \
+            --title "OnlyWeather $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes \
+            "${args[@]}"

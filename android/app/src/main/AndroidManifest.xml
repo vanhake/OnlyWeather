@@ -38,8 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Standort für "Mein Standort" (Browser-Geolocation in der WebView) -->
+    <!-- Standort für "Mein Standort" (Browser-Geolocation in der WebView). Der ungefähre
+         Standort genügt für das Wetter; die App fragt ohnehin ohne hohe Genauigkeit ab. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
 </manifest>
