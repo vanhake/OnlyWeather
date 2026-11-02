@@ -5,6 +5,7 @@
 // Start: npm run build && npm run serve   (PORT=8080 per Umgebungsvariable änderbar)
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { CSP } from './csp.mjs';
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -15,6 +16,7 @@ const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'no-referrer',
   'x-frame-options': 'DENY',
+  'content-security-policy': CSP,
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

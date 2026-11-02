@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { CSP } from './server/csp.mjs';
 
 // Der DWD-GeoServer liefert Kartenbilder problemlos per <img>. Für XML/JSON-Abfragen
 // (GetCapabilities, GetFeatureInfo) braucht der Browser CORS-Header. Fehlen sie,
@@ -14,6 +15,7 @@ const dwdProxy = {
 
 export default defineConfig({
   server: { proxy: dwdProxy },
-  preview: { proxy: dwdProxy },
+  // Im Entwicklungsserver keine CSP (Vite-HMR), in der Vorschau dieselbe wie in Produktion.
+  preview: { proxy: dwdProxy, headers: { 'Content-Security-Policy': CSP } },
   test: { environment: 'jsdom' },
 });

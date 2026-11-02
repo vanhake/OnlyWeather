@@ -250,6 +250,11 @@ und den User-Agent:
 - **Standort:** „Mein Standort“ fragt den Standort nur auf Knopfdruck und ohne hohe
   Genauigkeit ab. Die Android-App fordert nur den ungefähren Standort
   (`ACCESS_COARSE_LOCATION`) an.
+- **Content-Security-Policy:** `npm run serve` und `npm run preview` senden eine CSP
+  (`server/csp.mjs`), die Skripte nur von der eigenen Seite und Verbindungen nur zu den
+  oben genannten Diensten erlaubt. Kommt eine neue Datenquelle hinzu, muss sie dort
+  ergänzt werden. Die Android-App setzt keine CSP, weil Capacitor seine Brücke als
+  Inline-Skript einfügt.
 - **Lokal gespeichert** (Browser-`localStorage` bzw. App-Speicher, nie übertragen): die
   gespeicherten Orte, die Solar-Einstellungen, der zuletzt gewählte Tab und ein
   Zwischenspeicher der letzten Vorhersagen. Wer die Website-Daten bzw. App-Daten löscht,
