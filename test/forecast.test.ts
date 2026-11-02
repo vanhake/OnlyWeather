@@ -14,6 +14,12 @@ describe('forecast', () => {
     expect(url.searchParams.get('daily')).toContain('precipitation_probability_max');
   });
 
+  it('übermittelt den Standort nur auf zwei Nachkommastellen gerundet', () => {
+    const url = new URL(forecastUrl(52.520_812, 13.409_42));
+    expect(url.searchParams.get('latitude')).toBe('52.52');
+    expect(url.searchParams.get('longitude')).toBe('13.41');
+  });
+
   it('zeigt den Stundenverlauf ab 0 Uhr heute bis 24 h nach der aktuellen Stunde', () => {
     const hours = Array.from({ length: 48 }, (_, i) => `2026-10-26T${String(i % 24).padStart(2, '0')}:00`);
     const f = parseForecast({

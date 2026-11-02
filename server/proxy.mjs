@@ -5,11 +5,17 @@
 // Start: npm run build && npm run serve   (PORT=8080 per Umgebungsvariable änderbar)
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const ROOT = resolve(process.env.DIST_DIR ?? 'dist');
 const UPSTREAM = 'https://maps.dwd.de';
+// Für alle Antworten: kein MIME-Sniffing, kein Referrer an Dritte, keine Einbettung in fremde Seiten.
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'x-frame-options': 'DENY',
+};
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -39,9 +45,23 @@ async function proxy(req, res, path) {
   }
 }
 
+/** Liegt file innerhalb von ROOT? Ein reiner Präfixvergleich ließe Nachbarordner wie dist-alt zu. */
+function insideRoot(file) {
+  const rel = relative(ROOT, file);
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
 async function serveStatic(res, pathname) {
-  let file = normalize(join(ROOT, decodeURIComponent(pathname)));
-  if (!file.startsWith(ROOT)) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    // Ungültige Prozentkodierung (z. B. "%E0%A4%A"): sonst bräche der URIError den Server ab.
+    res.writeHead(400).end('Bad Request');
+    return;
+  }
+  let file = normalize(join(ROOT, decoded));
+  if (!insideRoot(file)) {
     res.writeHead(403).end();
     return;
   }
@@ -63,8 +83,18 @@ async function serveStatic(res, pathname) {
   }
 }
 
-createServer((req, res) => {
+async function handle(req, res) {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
   const url = new URL(req.url ?? '/', 'http://localhost');
-  if (url.pathname.startsWith('/dwd/')) return void proxy(req, res, url.pathname.slice(4) + url.search);
-  return void serveStatic(res, url.pathname);
+  if (url.pathname.startsWith('/dwd/')) return proxy(req, res, url.pathname.slice(4) + url.search);
+  return serveStatic(res, url.pathname);
+}
+
+createServer((req, res) => {
+  // Sicherheitsnetz: ein unerwarteter Fehler beendet nur diese Anfrage, nie den ganzen Server.
+  handle(req, res).catch((err) => {
+    console.error(err);
+    if (!res.headersSent) res.writeHead(500);
+    res.end();
+  });
 }).listen(PORT, () => console.log(`OnlyWeather läuft auf http://localhost:${PORT}`));

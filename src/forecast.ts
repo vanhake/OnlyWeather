@@ -105,8 +105,10 @@ interface OpenMeteoResponse {
 
 export function forecastUrl(lat: number, lon: number, solar: SolarSettings = DEFAULT_SOLAR): string {
   const params = new URLSearchParams({
-    latitude: lat.toFixed(3),
-    longitude: lon.toFixed(3),
+    // Zwei Nachkommastellen (~1 km) genügen für die Vorhersage und verraten Open-Meteo
+    // nicht den genauen Standort.
+    latitude: lat.toFixed(2),
+    longitude: lon.toFixed(2),
     // Neigung und Ausrichtung der Module für global_tilted_irradiance
     tilt: String(solar.tilt),
     azimuth: String(toOpenMeteoAzimuth(solar.bearing)),

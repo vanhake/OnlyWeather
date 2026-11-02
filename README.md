@@ -233,6 +233,28 @@ test/                   Unit-Tests
 
 Die Quellenangaben stehen im Footer und in der Kartenattribution.
 
+## Datenschutz
+
+OnlyWeather hat kein eigenes Backend, kein Konto, kein Tracking und keine Analyse- oder
+Werbedienste. Damit Vorhersage, Ortssuche und Karte funktionieren, ruft die App aber
+direkt Dienste Dritter auf. Jeder dieser Dienste sieht dabei die IP-Adresse des Geräts
+und den User-Agent:
+
+| Dienst | Was übertragen wird | Datenschutz |
+|---|---|---|
+| Open-Meteo (Forecast-API) | Koordinaten des gewählten Orts, auf 2 Nachkommastellen (~1 km) gerundet, sowie die Modulausrichtung aus dem Tab „Sonne“ | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
+| Open-Meteo (Geocoding-API) | der eingegebene Suchbegriff | wie oben |
+| OpenStreetMap-Kachelserver | die Kartenkacheln um den angezeigten Ausschnitt | [OSMF-Datenschutzerklärung](https://osmfoundation.org/wiki/Privacy_Policy) |
+| Deutscher Wetterdienst (maps.dwd.de) | Kartenausschnitt für Radar, Blitze und Warnungen; beim Antippen der Warnkarte der angetippte Punkt | [dwd.de/datenschutz](https://www.dwd.de/DE/service/datenschutz/datenschutz_node.html) |
+
+- **Standort:** „Mein Standort“ fragt den Standort nur auf Knopfdruck und ohne hohe
+  Genauigkeit ab. Die Android-App fordert nur den ungefähren Standort
+  (`ACCESS_COARSE_LOCATION`) an.
+- **Lokal gespeichert** (Browser-`localStorage` bzw. App-Speicher, nie übertragen): die
+  gespeicherten Orte, die Solar-Einstellungen, der zuletzt gewählte Tab und ein
+  Zwischenspeicher der letzten Vorhersagen. Wer die Website-Daten bzw. App-Daten löscht,
+  entfernt alles.
+
 ## Hinweise und Grenzen
 
 - Layer-Namen sind nicht fest verdrahtet. Die Liste in `src/config.ts` legt nur die Reihenfolge fest,
