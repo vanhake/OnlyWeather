@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      name: ${{ needs.version.outputs.name }}
-      code: ${{ needs.version.outputs.code }}
-      tag: ${{ needs.version.outputs.tag }}
-      skip: ${{ needs.version.outputs.skip }}
+      name: ${{ steps.version.outputs.name }}
+      code: ${{ steps.version.outputs.code }}
+      tag: ${{ steps.version.outputs.tag }}
+      skip: ${{ steps.version.outputs.skip }}
     steps:
       - uses: actions/checkout@v5
 
@@ -83,6 +83,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # Schutz: ohne Version nicht 40 s bauen und erst beim Release scheitern
+      - name: Version vorhanden?
+        env:
+          VERSION: ${{ needs.version.outputs.name }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          if [ -z "$VERSION" ] || [ -z "$TAG" ]; then
+            echo "::error::Keine Versionsnummer aus dem Job „version“ erhalten."
+            exit 1
+          fi
+          echo "Release $TAG"
+
       - uses: actions/checkout@v5
 
       # Java zuerst, damit die Schlüsselprüfung vor dem langen Build läuft
