@@ -48,6 +48,19 @@ unter dem Ortsnamen. Die Liste und der zuletzt gewählte Ort bleiben gespeichert
   ganzen Tag „bedeckt“ aussehen lässt.
 - Grundlage sind die Modelle des Deutschen Wetterdienstes (ICON), geliefert über Open-Meteo.
 
+### Widget (Android)
+
+Ein Widget für den Startbildschirm zeigt den Ort, der zuletzt in der App angezeigt wurde:
+
+- oben aktuelle Temperatur, Wetterlage mit Symbol, Ortsname sowie Höchst- und Tiefstwert des Tages,
+- darunter im 2-Stunden-Takt Uhrzeit, Wettersymbol und Regenwahrscheinlichkeit,
+- und eine Temperaturkurve, auf der Höchst- und Tiefstwert farbig markiert sind.
+
+Der Hintergrund richtet sich nach dem Wetter (klar, bewölkt, Regen, Schnee, Gewitter, Nacht). Das
+Widget lässt sich in Breite und Höhe anpassen, je nach Breite erscheinen 3 bis 8 Spalten. Es
+aktualisiert sich alle 30 Minuten, ⟳ oben rechts lädt sofort neu, ein Tippen auf das Widget öffnet
+die App.
+
 ### Detail-Tabs: Temperatur, Regen, Sonne
 
 Stundenwerte von heute 0 Uhr bis 48 Stunden nach jetzt. Beim Öffnen steht „Jetzt“ am linken Rand,

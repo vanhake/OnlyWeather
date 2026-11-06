@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Aktuelles Wetter, Regenwahrscheinlichkeit und Temperaturverlauf der nächsten Stunden</string>
+    <string name="widget_refresh">Aktualisieren</string>
+    <dimen name="widget_radius">20dp</dimen>
+</resources>
