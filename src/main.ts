@@ -8,6 +8,7 @@ import { PlaceList } from './places';
 import { DIRECTIONS, loadSolar, normalizeSolar, saveSolar } from './solar-settings';
 import { renderSolar } from './solar-view';
 import { compass, describeWeather } from './weathercodes';
+import { syncWidgetPlace } from './widget';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -102,6 +103,7 @@ async function showForecast(): Promise<void> {
 /** Zeigt den aktuell gewählten Ort an; ohne gespeicherte Orte den Standardort. */
 function showPlace(direction = 0): void {
   place = places.current ?? defaultPlace;
+  syncWidgetPlace(place);
   renderPlaceTrack();
   $('#remove-place').hidden = places.length === 0;
   renderDots();
