@@ -109,11 +109,14 @@
                 android:textSize="16sp" />
         </RelativeLayout>
 
-        <View
+        <!-- Trennlinie. Kein <View>: RemoteViews erlauben nur bestimmte Klassen (siehe
+             test/widget-layout.test.ts), sonst zeigt der Launcher „Widget kann nicht geladen werden“. -->
+        <ImageView
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="8dp"
-            android:background="#40FFFFFF" />
+            android:background="#40FFFFFF"
+            android:importantForAccessibility="no" />
 
         <FrameLayout
             android:layout_width="match_parent"
