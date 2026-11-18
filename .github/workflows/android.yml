@@ -59,3 +59,4 @@ jobs:
           name: OnlyWeather-${{ env.VERSION_NAME }}
           path: out/*.apk
           if-no-files-found: error
+          retention-days: 3

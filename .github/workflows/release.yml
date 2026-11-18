@@ -175,6 +175,7 @@ jobs:
           name: OnlyWeather-${{ needs.version.outputs.name }}-release
           path: out/*
           if-no-files-found: error
+          retention-days: 3
 
       # gh statt einer Drittanbieter-Action: der Job hat contents: write und sah die
       # Signatur-Secrets, fremder Code soll hier nicht laufen.
