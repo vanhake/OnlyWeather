@@ -14,6 +14,8 @@ const dwdProxy = {
 };
 
 export default defineConfig({
+  // Versionsnummer für die Infokarte „Neu in Version …“; setzt die Release-CI, lokal leer.
+  define: { __APP_VERSION__: JSON.stringify(process.env.VERSION_NAME ?? '') },
   server: { proxy: dwdProxy },
   // Im Entwicklungsserver keine CSP (Vite-HMR), in der Vorschau dieselbe wie in Produktion.
   preview: { proxy: dwdProxy, headers: { 'Content-Security-Policy': CSP } },

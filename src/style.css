@@ -598,3 +598,26 @@ main {
   color: var(--text);
   min-width: 0;
 }
+
+/* Infokarte „Neu in Version …“ nach einem Update (src/whats-new.ts) */
+.whats-new {
+  width: min(28rem, calc(100vw - 32px));
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  color: var(--text);
+  padding: 18px;
+}
+.whats-new::backdrop { background: rgb(0 0 0 / 0.45); }
+.whats-new ul { margin: 0 0 0.75rem; padding-left: 1.2rem; }
+.whats-new li { margin: 0.25rem 0; color: var(--text-2); }
+.whats-new-date { margin: 0.5rem 0 0.25rem; font-size: 0.8rem; font-weight: 600; color: var(--accent); }
+.whats-new form { display: flex; justify-content: flex-end; margin: 0; }
+.whats-new-ok {
+  font: inherit;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
