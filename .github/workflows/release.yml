@@ -125,6 +125,9 @@ jobs:
         run: npm test
 
       - name: Web-App bauen und in das Android-Projekt kopieren
+        env:
+          # Für die Infokarte „Neu in Version …“ (vite.config.ts)
+          VERSION_NAME: ${{ needs.version.outputs.name }}
         run: npm run android:sync
 
       - name: Signierte APK und App Bundle bauen

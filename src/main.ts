@@ -9,6 +9,7 @@ import { DIRECTIONS, loadSolar, normalizeSolar, saveSolar } from './solar-settin
 import { renderSolar } from './solar-view';
 import { compass, describeWeather } from './weathercodes';
 import { syncWidgetPlace } from './widget';
+import { pendingWhatsNew, showWhatsNew } from './whats-new';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -463,6 +464,8 @@ function setupSolarForm(): void {
 }
 
 function init(): void {
+  // Vor allem anderen: erkennt bisherige Nutzer an dem, was die App schon gespeichert hat.
+  const whatsNew = pendingWhatsNew();
   setupSolarForm();
   setupSearch();
   setupLegend();
@@ -487,6 +490,8 @@ function init(): void {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => lastForecast && renderHourlyChart($('#hourly'), lastForecast.hourly, lastForecast.nowIndex), 200);
   });
+  // Nach einem Update einmal „Neu in Version …“ zeigen (Texte: src/changelog.json).
+  if (whatsNew) showWhatsNew(whatsNew, __APP_VERSION__);
 }
 
 init();

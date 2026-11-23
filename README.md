@@ -103,6 +103,20 @@ Antippen zeigt den Warntext für diesen Ort.
 - Ist ein Dienst nicht erreichbar, erscheint eine verständliche Meldung statt einer leeren Fläche,
   das Radar versucht es nach 5 Minuten erneut.
 - Alle Datenquellen sind kostenlos und frei nutzbar.
+- Nach einem Update zeigt die App einmal eine Karte „Neu in Version …“.
+
+### Neuigkeiten pflegen
+
+Die Texte der Karte stehen in [`src/changelog.json`](src/changelog.json). Weil jeder Push auf
+`main` ein Release ist, gehört zu jeder Änderung, die Nutzer bemerken, oben ein neuer Eintrag:
+
+```json
+{ "id": 2, "date": "2026-12-01", "changes": ["Was sich für Nutzer ändert, in einem Satz."] }
+```
+
+`id` ist eine laufende Nummer, unabhängig von der Versionsnummer. Die App merkt sich die höchste
+gesehene `id` und zeigt beim nächsten Start alle neueren Einträge. Ohne neuen Eintrag erscheint
+keine Karte, beim allerersten Start auch nicht. `test/whats-new.test.ts` prüft die Datei.
 
 ## Datenschutz
 
